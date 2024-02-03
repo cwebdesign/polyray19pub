@@ -1,0 +1,10 @@
+//Sphere
+include "colors.inc"
+object
+{
+sphere <0,0,5>,0.5
+shiny_red
+}
+
+//Light Source
+light <5,5,5>
