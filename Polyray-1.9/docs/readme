@@ -1,0 +1,846 @@
+This file defines the major changes in Polyray between v1.7 and v1.8.  These
+things are also incorporated into POLYRAY.DOC, but for those of you that have
+read it before, this covers the majority of the differences.
+
+I) New entries in polyray.ini
+
+   screen_window x0, y0, xl, yl
+   resolution xres yres
+   maxscreenbuffer kbytes
+   error_log err.log
+   abort_test slow
+   pallette_start entry
+   pallette 4bit1
+   pallette 16bit1
+   csg_tolerance x
+   csg_subdivisions d
+
+- Screen subwindow & Negative Video Modes
+
+   screen_window x0, y0, xl, yl
+
+If you set the screen window, then all pixels in the image will be scaled
+to fit into the defined window.  The first two values define the upper left
+corner of the window, the next two values define the width and height of
+the window.  Note that if you have an image with a resolution lower than
+the size of the window, Polyray will scale the pixels larger so that the
+image fits the window.  (Uniform scaling only, so it may not fit in both
+directions.)
+
+This is particularly useful in conjunction with negative video mode flags if
+you want to incorporate Polyray displays into the displays of another program.
+If you have a program that runs in a supported Polyray video mode, then you
+can start Polyray with a system call plus a command line flag like: "-V -6"
+which would tell Polyray that you are already in a 320x200 hicolor mode and
+you want to stay there.
+
+- Default image resolution
+
+   resolution xres yres
+
+If the default resolution is set in polyray.ini then all images that don't
+have a resolution statement (or an overriding value on the command) line will
+use this resolution.  Without this statement the default resolution for
+image is 256x256
+
+- Maximum memory devoted to image buffering
+
+   maxscreenbuffer kbytes
+
+This value limits the amount of memory used for the Z-buffer and image buffer.
+The value given is in kilobytes.  There must be enough for at least 3 image
+lines (Polyray will override to get at least this much).  For example, the
+following entry in polyray.ini would limit the buffer storage to 256K bytes:
+
+   maxscreenbuffer 256
+
+This value can also be set from the command line with the -M flag:
+
+   polyray foo.pi -M 256
+
+- Error/Warning log file
+
+Instead of having warning and error messages spit out to the screen,
+it is possible to have Polyray automatically send them to a log file.  To
+do this you add a line like the following to polyray.ini:
+
+   error_log err.log
+
+All warnings and errors will now be sent to "err.log".  If you are running
+Polyray from within another program, then you can check the return value
+(non-zero implies a problem) and print any warnings or errors that may
+appear in the log file.
+
+- Modified abort test
+
+   abort_test slow
+
+If you use "abort_test slow", then Polyray will only check for a keypress to
+abort the render after an entire line in raytracing mode and after an entire
+object in scan/wireframe/raw mode.
+
+The -Q flag has been changed to accept a value.  If 0, then no abort test will
+be performed (except between frames, where an <esc> will cause an abort).  If
+it is 1 then it's the equivalent of "abort_test slow".  If 2 then an abort
+test is performed for every pixel drawn.
+
+- Pallette start 
+
+   pallette_start entry
+
+Tells Polyray that if a pallette based display mode is being used then the
+color entries should start at "entry".  No other entries in the pallette
+should be modified.  Note that the value of entry is limited by the total
+numbers of colors in the mode.
+
+- csg_tolerance, csg_subdivisions
+
+See the section on new rendering modes for info on how these work
+
+II) New video modes
+
+16 Color pallette
+
+From the command line use the flag "-P 3", from the file polyray.ini use one
+of the two lines:
+
+   pallette 4bit1     // 320x200 in 16 colors
+   pallette 4bit2     // 640x480 in 16 colors
+
+This choice of pallette matches the normal EGA colors.  Looks pretty crummy,
+however it only uses 16 colors total.
+
+16 Bit color
+
+Video modes 11-15 are now the 16 bit VESA modes.  The truecolor modes have
+been moved to 16-20 and the 4 bit modes to 21 & 22.  In polyray.ini they are
+called 16bit1 through 16bit5.
+
+
+      Resolution   Colors    Command Line   Initialization name
+---------------------------------------------------------------
+          N/A       none        -V 0        none
+
+      320x200        256        -V 1        vga/vga1
+      640x480        256        -V 2        vga2
+      800x600        256        -V 3        vga3
+     1024x768        256        -V 4        vga4
+    1280x1024        256        -V 5        vga5
+
+      320x200        32K        -V 6        hicolor/hicolor1
+      640x480        32K        -V 7        hicolor2
+      800x600        32K        -V 8        hicolor3
+     1024x768        32K        -V 9        hicolor4
+    1280x1024        32K        -V 10       hicolor5
+
+      320x200        64K        -V 11       16bit1
+      640x480        64K        -V 12       16bit2
+      800x600        64K        -V 13       16bit3
+     1024x768        64K        -V 14       16bit4
+    1280x1024        64K        -V 15       16bit5
+
+      320x200        16M        -V 16       truecolor1
+      640x480        16M        -V 17       truecolor2
+      800x600        16M        -V 18       truecolor3
+     1024x768        16M        -V 19       truecolor4
+    1280x1024        16M        -V 20       truecolor5
+
+      320x200         16        -V 21       4bit1
+      640x480         16        -V 22       4bit2
+
+III) Vector spline function
+
+The spline function has the form:
+
+   spline(type, t, [v0, v1, ..., vn], [p0, p1, ..., pn])
+
+It returns the value v0 if t <= 0, vn if t >= 1, and a value from a cubic
+spline through the array of points for any value between 0 and 1.  The third
+argument is optional and determines the type of the spline.  Valid values
+for type and their meaning are:
+
+   0 - A cubic spline starting at the first control point and finishing at
+       the last control point.
+   1 - A closed cubic spline (periodic, circular, ...).
+   2 - A polyline between each of the control points
+   3 - A closed polyline (last control point is automatically connected
+       to the first).
+   4 - A cubic spline with the derivitives defined for the endpoints.  The
+       syntax is:
+
+         spline(4, t, [d0, v0, v1, ..., vn, dn], [p0, p1, ..., pn])
+
+       Note that if the parameters are included, then there must be exactly
+       two less entries in the parameter array than in the control point
+       array.
+
+For example, a flythrough can be performed with just a few control points
+and the spline function:
+
+   define cam_path [
+    <0.384631,-0.229508,3>,
+    <0.874141,-0.262296,0.03615>,
+    <0.3147,-0.508196,-3.57831>,
+    <3.321691,-0.131148,-0.25302>,
+    <2.76225,-0.163934,1.12047>]
+
+   define cam_from spline(time,cam_path)
+   define cam_at spline(time+0.001,cam_path)
+
+   viewpoint {
+      from cam_from
+      at cam_at
+      }
+
+Note: The straight line spline is unlikely to be useful for a flythrough.
+There will be sudden changes of direction of the camera at each control point.
+
+IV) Non-uniform scaling
+
+You can now perform non-uniform scaling of a vector.  By using a statement of
+the form:
+
+   <a, b, c> ^ <x, y, z>
+
+You get the resulting vector:
+
+   <a*x, b*y, c*z>
+
+This is an exterior product of the two vectors.
+
+V) Non-shadowing lights
+
+The keyword "no_shadow" can be added to all of the supported light types to
+prevent shadows from being cast by that light.  The no_shadow comes right
+after the keywords: light, spot_light, and directional_light.  It may appear
+anywhere within the declaration of textured_light and depthmapped_light.
+
+For example the following declaration is a point light at <0, 10, 0> that
+doesn't cast a shadow:
+
+   light no_shadow <0, 10, 0>
+
+VI) New rendering modes: Hidden line, Gourad shading, CSG Triangles
+
+Three new rendering modes are now supported: hidden line, Gourad shading,
+and CSG Triangles.  The rendering mode numbers have also changed.  The list
+is now:
+
+   0 - Raytracing
+   1 - Scan line polygon rendering (full texturing)
+   2 - Wire frame
+   3 - Hidden line rendering
+   4 - Gourad shading (texturing at vertices only)
+   5 - raw triangles
+   6 - u/v triangles
+   7 - CSG triangles
+
+Hidden line is pretty much self explanatory - lines in the wireframe that
+aren't visible due to blocking by other polygons aren't shown.  Gourad
+shading performs a texturing calculation at the corners of all triangles and
+fills in color by interpolating between the vertices.  CSG triangles are
+like raw triangles, but the triangles are further trimmed based on CSG (this
+can cause the creation of many more small triangles).
+
+Another change is that modes 0 - 4 all generate an output image file.
+Previously the wire frame mode did not generate an image file.  
+
+To tune the output of CSG triangles, you will want to set the values of
+the two variables, csg_tolerance, and csg_subdivisions, in POLYRAY.INI.
+csg_tolerance is how finely a triangle will be diced in world coordinates
+to check for CSG, csg_subdivisions is how many recursive steps are taken
+with each triangle while checking for CSG.  You want to keep csg_subdivisions
+low (like less than 5) as the number of CSG checks goes up like 4^n where n is
+the number of subdivision levels.  The defaults are:
+
+   csg_tolerance 0.05
+   csg_subdivision_depth 3
+
+You would change csg_tolerance based on the world coordinate sizes of your
+model.  If you have a model that extends from -1000 to 1000, you would probably
+set it around 10.  The default assumes models that around 1 unit in size.
+
+VII) 3D line drawing
+
+It is now possible to draw single pixel wide points and lines.
+
+   point location, color
+
+   draw min_t, max_t, steps, location, color
+
+For example, to draw a spline curve on the screen you could do the following:
+
+   define sp1 [<-1, -1, 0>, <-0.5, 0.2, 0>,
+               < 2,  1, 0>, < 1,   1.5, 0>,
+               < 2,  2, 0>]
+   define sp3 [cyan, blue, magenta]
+
+   draw 0, 1, 256, spline(1, u, sp1), spline(0, u, sp3)
+
+This will draw the spline curve sp1 using 256 line segments.  The color of
+the spline will vary from cyan to blue to magenta along the spline.
+
+VIII) Raw objects
+
+Raw files are either bare bones ASCII files that describe triangles or files
+in WaveFront .obj format.  RAW ASCII files typically contain the xyz
+coordinates of each of the three coordinates of a triangle, one set
+(nine values) per line.  Sometimes these raw files will contain additional
+information such as normal values for the vertices or texture names to
+use for the triangles.
+
+The format of the primitive is:
+
+   raw "rawfile" [, smooth_angle]
+
+You can read an ASCII raw file containing lines with the following formats:
+
+   1) 9 vertices per line
+   2) 9 vertices, 9 normal values per line
+   3) 9 vertices, 9 normal values, 6 u/v values per line
+   4) 9 vertices per line followed by a texture name
+   5) A texture name alone, followed by lines with any of the
+      formats in 1 through 4 above.
+
+The WaveFront .obj files should all be parsed properly (if they meet the
+spec).  However Polyray currently doesn't understand the following things
+that can be in a .obj file: smoothing groups and NURBS.
+
+ASCII raw files aren't generally readable.  For example, the lines below are
+taken from a raw file:
+
+   2 -5e-08 -2e-07 1.848 0.7654 -1.848e-07 1.707 0.7654 -0.7071 
+   2 -5e-08 -2e-07 1.707 0.7654 -0.7071 1.848 -5e-08 -0.7654 
+   1.848 0.7654 -1.848e-07 1.414 1.414 -1.414e-07 1.307 1.414 -0.5412 
+   1.848 0.7654 -1.848e-07 1.307 1.414 -0.5412 1.707 0.7654 -0.7071 
+   1.414 1.414 -1.414e-07 0.7654 1.848 -7.654e-08 0.7071 1.848 -0.2929 
+   1.414 1.414 -1.414e-07 0.7071 1.848 -0.2929 1.307 1.414 -0.5412 
+   0.7654 1.848 -7.654e-08 1e-07 2 -1e-14 9.239e-08 2 -3.827e-08 
+   0.7654 1.848 -7.654e-08 9.239e-08 2 -3.827e-08 0.7071 1.848 -0.2929 
+
+The file defines a single Polyray object.  Note that the memory devoted to
+the raw object is only allocated once.  This means that you can declare a
+raw object and make many instantiations of it without using any more memory
+than the first.  This is very different than what you would get if you use
+RAW2POV.  In that case, each instantiation would hold a complete copy of
+the declared object, using up as much memory for a copy as for the original.
+(It's a problem with Polyray, not with RAW2POV.)
+
+If a texture name appears (either at the end of a line, or by itself) then
+that texture will be used for the triangle, regardless of any other
+declarations that may appear in the data file.  If you want to use different
+textures for the raw object then you should avoid using texture names
+in the raw data file.
+
+For example, the following file demonstrates how to declare and use a raw
+skull:
+
+   viewpoint {
+      from <0,0,-25>
+      at <0,0,0>
+      angle 25
+      }
+   background white
+   light <-10,3, -20>
+   include "colors.inc"
+
+   define skull
+   object { raw "skull.raw" rotate <90, -30, 180> translate <0, 3, 0> }
+
+   skull { shiny_red }
+   skull { shiny_coral translate < 4, 4, 5> }
+   skull { shiny_green translate <-4, 4, 5> }
+   skull { metallic_magenta translate < 4,-4, 5> }
+   skull { metallic_orange translate <-4,-4, 5> }
+
+The file "skull.raw" contains around a thousand triangles, one per line.
+
+If an angle follows the raw file name, then all triangles that are next
+to each other and that form an angle less than the smoothing angle will have
+their normals averaged together.  The smoothing angle must be between 0 and
+180.  At 0 there will be no smoothing and at 180 every normal will be smoothed.
+For example the following declaration will produce the skull with smoothing for
+triangles that are within 30 degrees of each other.
+
+   object { raw "skull.raw", 30 }
+
+Note that the angles are measured by looking at the face normals of the
+triangles.  This means that you need to have a consistent ordering of the
+vertices around each triangle.  If you don't have all vertices in the same
+order (e.g., clockwise) then you may have some smoothing errors.
+
+IX) Lens flares
+
+You can now attach lens flares to a textured light.  The flares are defined
+with the following format:
+
+   textured_light {
+      color ...
+      flare {
+         color color_expression
+         count num_flares
+         spacing power_fn
+         seed random_seed
+         size min_radius, max_radius
+	 concave concave_convex_ratio
+	 sphere glow_radius
+         }
+      }
+
+All values have defaults:
+   color    = White
+   count    = 10
+   spacing  = 1.0
+   seed     = 0
+   min_rad  = 0.005    // Min size as a fraction of screen size
+   max_rad  = 0.05
+   concave  = 0.75     // Approximately 3/4's of the rings are concave
+   radius   = 0.0      // No glow around the light
+
+Definitions of the components of the flare declaration:
+
+   The color of the flare can either be solid color or color expression.  Color
+   maps can really help the look of a flare.
+
+   The value given in spacing determines how bunched the flare rings are around
+   the light source.
+
+   The value of count determines how many flare rings will appear
+
+   The value of seed is used to change the placement of the flare rings.  (They
+   are randomly placed along the line between the light and the center of the
+   screen with the random number generator initialized to the seed value.)
+
+   The minimum and maximum radius values determine how large the flare rings
+   will be on the screen.
+
+There are several runtime variables that have special meaning when evaluating
+the color expression in a lens flare:
+
+   u - Distance from the center of the flare (at the current pixel)
+   v - Angle from the x-axis to the current pixel
+   w - Which flare (between 0 and count-1)
+   x - 1 if the flare has a hot center, 0 if the flare has a hot outer edge
+
+For example, the following creates a light with yellowish lens flares:
+
+   define flare_color01 (gold + white) / 2
+   define flare_color02 (yellow + white) / 2
+   define flare_color03 (red + white) / 2
+   static define flare_map0
+      color_map([0.00, 0.20, flare_color01, 0.4, flare_color02, 0.4]
+                [0.20, 0.40, flare_color02, 0.4, flare_color03, 0.8]
+                [0.40, 1.00, flare_color03, 0.8, black,        1.0])
+   static define flare_map1
+      color_map([0.00, 0.10, black,         1.0, flare_color01, 0.4]
+                [0.10, 0.20, flare_color01, 0.4, flare_color02, 0.4]
+                [0.20, 0.40, flare_color02, 0.4, flare_color03, 0.8]
+                [0.40, 1.00, flare_color03, 0.8, black,        1.0])
+   textured_light {
+      color 0.8*white
+      translate light0_loc
+      flare {
+         color (x > 0 ? flare_map0[u] : flare_map1[u]) // red
+         size 0.003, 0.1
+         count 15
+         seed 2020
+         }
+      }
+   object { sphere light0_loc, 0.3 shading_flags 0
+            texture { surface { color white ambient 1 diffuse 0 } } }
+
+The sphere declaration has shading flags set so that it won't block the light
+that is sitting inside.  It's just there so you can see where the light is
+placed.
+
+X) Changes in the shading model
+
+Brilliance
+
+Surfaces may now define a brilliance exponent to modify the diffuse shading.
+This can be used to enhance the metallic quality of a texture.  Compare
+the shading of the two spheres listed below:
+
+   object {
+      sphere <0, 0, 0>, 1
+      texture { shiny { color gold } }
+      translate <-1, 0, 0>
+      }
+
+   object {
+      sphere <0, 0, 0>, 1
+      texture { shiny { color gold specular 0.6 brilliance 2 } }
+      translate <1, 0, 0>
+      }
+
+Transparency color and opacity
+
+Special surfaces have been modified slightly in how they use color and
+transparency.  The changes are almost entirely focused on surfaces that
+have the form:
+
+   special surface {
+      color color_map(...)[...]
+      ambient ...
+      ...
+      }
+
+If there is an alpha value in the color map, then the transmission scale
+will be set according to the alpha value.  This will always happen, even
+if you put in a value for the transmission scale.
+
+The transmission color will be set to the color that came out of the color_map
+only if there isn't a transmission statement (or the transmission statement
+only has scale & ior values).  If there is a transmission statement with
+a color, that that color will be used to filter light passing through the
+surface.  The change from previous versions is that Polyray used to use
+white as the transmission color if there was an alpha value in the color_map.
+
+Two new runtime variables have been added to ease texture design.  The
+variable 'color' is set to the function in the color statement in the
+special surface.  The variable 'opacity' is set to 1 - alpha (where the alpha
+value came from the color statement.  This is useful if you want to adjust the
+diffuse (or specular) lighting based on transparency (like POV-Ray does in
+it's textures).  For example, this is a texture that has a color map that goes
+from white to red and from opaque to transparent, and diminishes the diffuse &
+specular:
+
+   texture {
+      special surface {
+         color color_map([0.0, 0.3, white, white]
+	                 [0.3, 1.0, white, 0, red, 1])
+         diffuse 0.8 * opacity
+         specular white, 0.4 * opacity
+         }
+      }
+
+Another change you will need to make in your color maps is to use "white, 1"
+instead of "black, 1" to mean transparent.
+
+XI) Finding bounds of objects
+
+It is now possible to have Polyray figure out the bounds of an object for
+use in later operations.  For example, you may have a glyph object and you
+want to center it.  To do this, the functions min() and max() have been
+enhanced to understand objects.  Unlike their normal use of returning
+the smallest/largest of two numbers, when you give them the name of a
+defined object in double quotes (e.g., "sphere1") then they will return
+the lower left corner or upper right corner of the bounding box of the
+object.
+
+For example, if you have a complicated glyph (like the character 'a' using
+a serif font):
+
+   define char_a
+   object { // Char: 'a'
+      glyph 2
+         contour 35, <1.119434, 0.000000, 0>, <1.105273, 0.043945, 1>,
+         <1.105273, 0.075684, 0>, <1.045703, 0.016602, 1>,
+   ...
+
+To determine the size of this character along each axis you would simply
+subtract the min value from the max value:
+
+   define glypha_width max("char_a") - min("char_a")
+
+If you just wanted the width along the x-axis, then you would look at the
+first coordinate of the vector above:
+
+   define glypha_xwidth (max("char_a") - min("char_a"))[0]
+
+Using the width of the character, we can now accurately place several of
+these next to each other:
+
+   define five_a
+   object {
+      char_a +
+      char_a { translate glypha_width } +
+      char_a { translate 2*glypha_width } +
+      char_a { translate 3*glypha_width } +
+      char_a { translate 4*glypha_width }
+      }
+
+The center of an object can also be determined very easily.  By figuring
+the average of the min and max, you get the center of the bounding box.  The
+example below shows how you can find the center of an object and then
+translate so that the center of the object is right at the origin (<0,0,0>).
+
+   define five_a_width (min("five_a") + max("five_a"))/2
+
+   // Instantiate the character a, centered at the origin
+   five_a { translate -five_a_width }
+
+XII) Search path
+
+Polyray will now search for include files in all directories that appear
+in the environment variable POLYRAY_PATH.  This is a big help if you want
+to keep just a single copy of .inc files and want Polyray to go get them
+from a specific directory without explicitly giving the path within the
+data file.  (Works just like the DOS PATH statement for executables.)
+
+For example, if you keep your normal colors and texture include files in
+c:\polyray\include, and keep a bunch of image files for mapping in the
+directory c:\images then you could set the path in your AUTOEXEC.BAT with:
+
+   set POLYRAY_PATH=;c:\polyray\include;c:\images
+
+XIII) Superquadric primitive
+
+The format of the primitive is:
+
+   superq n, e
+
+Where "n" is the coefficient for shaping in the up/down direction
+and "e" is the shaping cofficient for the east/west (around) direction.
+The values for n and e MUST be larger than 0, and in fact the shape
+will probably fail if you use values lower than around 0.1.
+
+The formula for the superquadric is:
+   
+   (|x|^(2/e) + |y|^(2/e))^(e/n) + |z|^n - 1.0 = 0
+
+(Bet that makes a lot of sense..) For example, the following object
+is a pinchy shape:
+
+   object { superq 3, 3 }
+
+Where the one below is a cylinder with rounded edges:
+
+   object { superq 0.2, 1 }
+
+These are nice values to use:
+
+    Shape            n     e
+    -------------------------
+    Cylinder        0.1   1
+    Rounded Box     0.1   0.1
+    Pillow          1     0.1
+    Sphere          1     1
+    Double Cone     2     1
+    Octahedron      2     2
+    Pinchy          3     3
+ 
+XIV) New functions
+
+New noise functions
+
+A second noise function has been added, "fnoise()".  It is a variation on
+the existing noise() function that more closely matches the Perlin turbulence
+function.  All the arguments are the same, i.e.:
+
+   fnoise(P)
+   fnoise(P, octaves)
+   fnoise(P, <pos scale, noise scale, octaves>)
+
+Bias and gain functions
+
+For tweaking the inputs to color maps, two functions have been added:
+
+   bias(a, t)
+   gain(a, t)
+
+These two functions take input parameters a and t (both between 0 and 1)
+and generate an output between 0 and 1.  The variable t modifies the
+shape of the curve.  These functions are modelled after the ones described
+by Perlin.
+
+The function bias pushes input values between 0 and 1 towards 0 if
+t is close to 0 and towards 1 if t is close to 1.  If t is 0.5, then
+the output of bias is the same as the input.  Use this if your color map
+values are to thin or to thick at one end or the other.
+
+The function gain is an s-curve that starts flat and ends flat if t is
+close to 0 and starts vertical and ends vertical if t is close to 1.  Like
+bias, if t is 0.5 it returns the input value without change.
+
+Values of lower than 0 or greater than 1 will give undefined results.
+
+These functions are particularly useful for manipulating color maps.
+For example, the following show how you can adjust the amount of clouds to
+blue in a sky map:
+
+define cloudy_sky_map
+      color_map(
+	 [0.0, 0.6, <0.4, 0.4, 0.4>, <1, 1, 1>]
+	 [0.6, 0.8, <1, 1, 1>, <0.196078, 0.6, 0.8>]
+	 [0.8, 1.0, <0.196078, 0.6, 0.8>, <0.196078, 0.6, 0.8>])
+
+// Adjust the bias of the cloud function so that the sky gets
+// cloudier as we look farther away.  Directly up is clear
+define cloud_rate 0.7
+define cloud_bias min(0.5 + bias(|I[1]|, cloud_rate), 1)
+
+// Build the sky sphere
+object {
+   sphere <0, 0, 0>, 20000
+   scale <1, 0.01, 1>
+   texture {
+      special surface {
+         color cloudy_sky_map[bias(fnoise(P, 5), cloud_bias)]
+         ambient 0.9
+         diffuse 0
+         specular 0
+         }
+      scale <500, 100, 300>
+      }
+   shading_flags 0
+   }
+
+Random number
+
+   random
+
+This returns a random value between 0 and 1.
+
+Ripple function
+
+The ripple function is used to modify normals as if they were being affected
+by ripples moving outward from a point.
+      ripple(P),
+      ripple(P, freq, phase),
+
+To simulate the ripple function used in the standard textures, you can sum
+several ripple functions.  For example, the declarations below are a close
+match for the blue_ripple texture:
+
+define ripple_freq 20
+define ripple_phase 0
+
+define ripple_center1 2*(<random, random, random> - white/2)
+define ripple_center2 2*(<random, random, random> - white/2)
+define ripple_center3 2*(<random, random, random> - white/2)
+define ripple_center4 2*(<random, random, random> - white/2)
+define ripple_center5 2*(<random, random, random> - white/2)
+
+// Piece together the centers to make an overall ripple
+define ripple_fn
+   (ripple(P, ripple_center1, ripple_freq, ripple_phase) +
+    ripple(P, ripple_center2, ripple_freq, ripple_phase) +
+    ripple(P, ripple_center3, ripple_freq, ripple_phase) +
+    ripple(P, ripple_center4, ripple_freq, ripple_phase) +
+    ripple(P, ripple_center5, ripple_freq, ripple_phase)) / 5
+
+define blue_ripple
+texture {
+   special shiny {
+      color <0.4, 0.4, 1.0>
+      normal N + ripple_fn
+      reflection 0.5
+      }
+   }
+
+Another nice effect is to diminish the size of the ripples over distance.
+The example below shows two ripples that are strong at their centers and
+fade in effect farther away:
+
+define C1 <0, 0, 0>
+define C2 <2, 0, 2>
+define ripple_fn
+   0.2 * ripple(P, C1, 20, 0) * exp(-|C1-P|) +
+   0.2 * ripple(P, C2, 10, 0) * exp(-|C2-P|)
+
+Ramp function
+
+   ramp(x)
+
+This chops a value so that it is always between 0 and 1.  If a number is
+larger than 1 then the fractional part is returned.  If the number is
+less than 0, the difference betwen it and the next lower number is returned.
+This gives the shape of a series of ramps:
+
+                /
+               /
+              /      ->    /////
+             /
+            /
+
+This particular function is useful if you have a color map that covers the
+range from 0 to 1 and you want to ensure that the function you feed into
+it stays inside the map.  For example, an onion texture could be defined
+with:
+
+   define onion_fn ramp(|P|)
+   define white_onion_map
+       color_map([0, 0.8, white, 0.5*white]
+	         [0.8, 1, 0.5*white, 0.2*white])
+   define white_onion
+      texture { special shiny { color white_onion_map[onion_fn] } }
+
+If you are used to using the POV-Ray keywords frequency and phase in your
+textures, it's a simple thing to get the same effect.  Simply add them
+inside the ramp() function:
+
+
+   define onion_freq 42
+   define onion_phase 0
+   define onion_fn ramp(onion_freq * |P| + onion_phase)
+
+New indexed maps
+
+   cylindrical_indexed_map(P [, repeat_flag])
+   spherical_indexed_map(P [, repeat_flag])
+
+These are new variations on the indexed_map() that do their thing by
+wrapping around spherically and cylindrically.  See the descriptions of
+indexed_map() and spherical_imagemap() for more details.
+
+XV) Planar area lights
+
+A textured light that has a polygon definition is treated as a flat
+area light.  The starting size is a box in the x-z plane, from the origin
+to <1, 0, 1>.  You rotate/scale/translate it into position from there.
+
+The declaration of the polygon has the following parameters:
+
+   textured_light {
+      color ...
+      polygon xres, zres, adaptive_depth, jitter_amount
+      ...
+      }
+
+The rest of the entries are the same as for normal textured lights - you
+can put a standard color or a formula for the color, you can transform it,
+all that sort of stuff (see docs).
+
+The values of xres and zres determine the minimum number of times the light
+will be sampled.  If adaptive_depth is greater than 0 then the polygon will
+be subdivided using a method identical to the way antialiasing works.  Jitter
+determines how much each shadow ray is wiggled inside each piece of the light,
+a value of 0.25 works pretty well.
+
+For example, this creates an area light centered at the location <10, 8, 0>,
+with sides a single unit, and pointed down the x-axis.
+
+textured_light {
+   color white
+   polygon 2, 2, 1, 0.05
+   translate <-0.5, 0, -0.5>
+   rotate <0, 0, 90>
+   translate <10,8,0>
+   }
+
+XVI) Lights inside objects
+
+Any light can now be placed inside an object.  This is really useful for
+adding lights to CSG unions.  Now the lights go along with the rest of
+your big union.  The format is:
+
+object {
+   ... standard light declaration ...
+   }
+
+Yes, you can add scale/rotate/translate declarations.  They will do the
+sensible things to the light.  For example:
+
+object {
+   object {
+      light white, <0, 0, 0>
+      translate <20, 20, -40>
+      } +
+   object {
+      sphere <0, 0, 0>
+      shiny_red
+      }
+   rotate <0, 30, 0>
+   }
+

@@ -1,0 +1,3571 @@
+<html>
+<head><link rel=StyleSheet href="../../pdbstyle.css" type="text/css" media=all>
+
+<title>Polyray v1.7</title>
+</head>
+<body bgcolor="#ffffff">
+
+<center>
+<h1>Polyray v1.7</h1>
+Written Copyright (c) 1991-1994 by Alexander R. Enzmann<p>
+</center>
+<p><hr><p>
+
+The data files are ASCII text, the output image file format supported
+is Targa.  Input images (for texturing, height fields, etc.) may be:
+Targa (all variants defined in the Truevision spec), GIF (both 87a and
+89a should work), or JPEG (JFIF format).  
+Polyray is case sensitive, so the following ways
+of writing foo are all considered different: Foo, FOO, and foo.  For
+an abbreviated list of Polyray's syntax, see the file quickref.txt.
+</p>
+
+<h2><a name=1.6>Initialization File</a></h2>
+<p>
+
+The first operation carried out by Polyray is to read the
+initialization file polyray.ini.  This file can be used to tune a
+number of the default variables used during rendering.  It must appear
+in the current directory.  It doesn't have to exist, it is typically
+used as a convenience to eliminate retyping command line parameters.<p>
+
+Each entry in the initialization file must appear on a separate line,
+and have the form:
+
+<pre> default_name   default_value</pre>
+
+The names are text.  The values are numeric for some names, and text
+for others.  The allowed names and values are:<p>
+
+<center><table border cellpadding=5>
+<caption align=bottom>Valid <b>polyray.ini</b> options</caption>
+<tr><th>Option<th>Description
+<tr><td> abort_test<br> alias_threshold<br> antialias<br> display<br>
+max_level<br> max_samples<br> optimizer<br> pixel_size<br>
+pixel_encoding<br> renderer<br> shade_flags<br> shadow_tolerance<br>
+status<br> warnings
+<td> true/false/on/off<br>
+<i>threshold to start adaptive antialiasing</i><br>
+none/filter/adaptive1/adaptive2<br>
+none/vga1-vga5/hicolor1-hicolor5/truecolor1-truecolor5<br>
+<i>max depth of recursion</i><br> <i># samples for focal blur</i><br>
+none/slabs<br> 8/16/24/32<br> none/rle<br>
+ray_trace/scan_convert/wire_frame/raw_triangles/uv_triangles<br>
+<i>default/bit mask of flags<br>
+<i>minimum distance for blocking objects</i><br> none/totals/line/pixel<br>
+on/off </table></center><p>
+
+A typical example of polyray.ini would be:<p>
+
+<pre>
+    abort_test		on
+    alias_threshold	0.05
+    antialias		adaptive
+    display		vga
+    max_samples		8
+    pixel_size		24
+    status		line
+</pre>
+
+If no initialization file exists, then Polyray will use the following
+default values:<p>
+
+<blockquote>
+<table border cellpadding=5>
+<caption align=bottom>Default <b>polyray.ini</b> settings</caption>
+<tr><th>Name<th>Default
+<tr><td>
+abort_test<br> alias_threshold<br> antialias<br> display<br>
+max_level<br> max_samples<br> optimizer<br> pixel_size<br>
+pixel_encoding<br> renderer<br> shade_flags<br> shadow_tolerance<br>
+status<br> warnings<td>
+
+on<br> 0.2<br> none<br> none<br> 5<br> 4<br> slabs<br> 16<br>
+rle<br> ray_trace<br> default: 0.001<br> none<br> on
+</table>
+</blockquote>
+
+<h3><a name=1.7.5>Raw Triangles</a></h3>
+<p>
+A somewhat odd addition to the image output formats for Polyray is the
+generation of raw triangle information.  What happens is very similar
+to the scan conversion process, but rather than draw polygons, Polyray
+will write a text description of the polygons (after splitting them
+into triangles).  The final output is a (usually long) list of lines,
+each line describing a single smooth triangle.  The format of the
+output is one of the following:<p>
+
+<pre>   x1 y1 z1 x2 y2 z2 x3 y3 z3</pre>
+or
+<pre>   x1 y1 z1 x2 y2 z2 x3 y3 z3 nx1 ny1 nz1 nx2 ny2 nz2 nx3 ny3 nz3
+   u1 v1 u2 v2 u3 v3</pre>
+<p>
+If the output is raw triangles then only the three vertices are
+printed.  If uv_triangles are being created, then the normal
+information for each of the vertices follows the vertices and the u/v
+values follow them.  The actual u/v values are specific to the type of
+object being generated.<p>
+
+Currently I don't have any applications for this output, but the first
+form is identical to the input format of the program RAW2POV. The
+intent of this feature is to provide a way to build models in polygon
+form for conversion to the input format of another renderer.<p>
+
+<h3><a name=2> Detailed description of the Polyray input format:</a></h3>
+<p>
+An input file describes the basic components of an image:<p>
+
+<ul>
+<li>A viewpoint that characterizes where the eye is, where it is
+     looking and what its orientation is.
+<li>Objects, their shape, placement, and orientation.
+<li>Light sources, their placement and color.
+</ul>
+<p>
+Beyond the fundamentals, there are many components that exist as a
+convenience such as definable expressions and textures.  This section
+of the document describes in detail the syntax of all of the
+components of an input file.<p>
+
+
+<h2><a name=2.1>Expressions</a></h2>
+<p>
+There are six basic types of expressions that are used in Polyray:<p>
+
+<dl>
+<dt>float<dd>  Floating point expression (e.g., 0.5, 2 * sin(1.33)).
+             These are used at any point a floating point value is
+             needed, such as the radius of a sphere or the amount of
+             contribution of a part of the lighting model.
+<dt>vector<dd> Vector valued expression  (e.g., &lt;0, 1, 0>, red,
+             12 * &lt;2, sin(x), 17> + P).  Used for color expressions,
+             describing positions, describing orientations, etc.
+<dt>arrays<dd> Lists of expressions (e.g., [0, 1, 17, 42],
+             [&lt;0,1,0>, &lt;2*sin(theta), 42, -4>, 2*&lt;3, 7, 2>])
+<dt>cexper<dd> Conditional expression (e.g., x &lt; 42).
+<dt>string<dd> Strings used for file names or systems calls
+<dt>images<dd> A Targa, GIF, or JPEG image.
+</dl>
+<p>
+The following sections describe the syntax for each of these types of
+expressions, as well as how to define variables in terms of
+expressions.  See also the description of color maps, image maps (from
+which you can retrieve color or vector values), indexed maps, and
+height maps.<p>
+
+
+<h3><a name=2.1.1>Numeric expressions</a></h3>
+<p>
+In most places where a number can be used (i.e. scale values, angles,
+RGB components, etc.) a simple floating point expression (float) may
+be used.  These expressions can contain any of the following terms:<p>
+
+<center><table border cellspacing=1 cellpadding=3>
+<caption align=bottom>Numeric expressions supported by Polyray</caption>
+<tr><th>Expression<th>Description
+<tr><td>-0.1, 5e-3, ab, ...     <td>A floating point number or defined value
+<tr><td>'(' float ')'           <td>Parenthesised expression
+<tr><td>float ^ float           <td>Exponentiation, same as pow(x, y)
+<tr><td>float * float           <td>Multiplication
+<tr><td>float / float           <td>Division
+<tr><td>float + float           <td>Addition
+<tr><td>float - float           <td>Subtraction
+<tr><td>-float                  <td>Unary minus
+<tr><td>acos(float)             <td>Arccosine, (radians for all trig functions)
+<tr><td>asin(float)             <td>Arcsin
+<tr><td>atan(float)             <td>Arctangent
+<tr><td>atan2(float,float)      <td>Angle from x-axis to the point (x, y)
+<tr><td>ceil(float)             <td>Ceiling function
+<tr><td>cos(float)              <td>Cosine
+<tr><td>cosh(float)             <td>Hyperbolic cosine
+<tr><td>degrees(float)          <td>Converts radians to degrees
+<tr><td>exp(float)              <td>e^x, standard exponential function
+<tr><td>fabs(float)             <td>Absolute value
+<tr><td>floor(float)            <td>Floor function
+<tr><td>fmod(float,float)       <td>Modulus function for floating point values
+<tr><td>heightmap(image,vector) <td>Height of an pixel in an image
+<tr><td>indexed(image,vector)   <td>Index of an pixel in an image
+<tr><td>legendre(l,m,n)         <td>Legendre function
+<tr><td>ln(float)               <td>Natural logarithm
+<tr><td>log(float)              <td>Logarithm base 10
+<tr><td>min(float,float)        <td>Minimum of the two arguments
+<tr><td>max(float,float)        <td>Maximum of the two arguments
+<tr><td>noise(vector)<br>
+noise(vector,float)     <td>Solid texturing (noise) function.  If the
+				second argument is given, it is used as the
+				number of octaves (repetitions) of the 3D
+				noise function.
+<tr><td>noise(vector,vector)    <td>Second arg provides more flexible operation
+				using: &lt;pos scale, noise scale, octaves>
+<tr><td>pow(float,float)        <td>Exponentiation (x^y)
+<tr><td>radians(float)          <td>Converts degrees to radians
+<tr><td>sawtooth(float)         <td>Sawtooth function (range is 0 - 1)
+<tr><td>sin(float)              <td>Sine
+<tr><td>sinh(float)             <td>Hyperbolic sine
+<tr><td>sqrt(float)             <td>Square root
+<tr><td>tan(float)              <td>Tangent
+<tr><td>tanh(float)             <td>Hyperbolic tangent
+<tr><td>visible(vector,vector)  <td>Returns 1 if second point visible from
+				first.
+<tr><td>vector[i]               <td>Extract component i from a vector (0<=i<=3)
+<tr><td>vector . vector         <td>Dot product of two vectors
+<tr><td>|float|                 <td>Absolute value (same as fabs)
+<tr><td>|vector|                <td>Length of a vector
+</table></center><p>
+
+<h3><a name=2.1.2>Vector Expressions</a></h3>
+<p>
+In most places where a vector can be used (i.e. color values, rotation
+angles, locations, ...), a vector expression is allowed.  The
+expressions can contain any of the following terms:<p>
+
+<center><table border cellspacing=1 cellpadding=3>
+<caption align=bottom>Vector expressions supported by Polyray</caption>
+<tr><th>Expression<th>Description
+<tr><td>vector + vector         <td>Addition
+<tr><td>vector - vector         <td>Subtraction
+<tr><td>vector * vector         <td>Cross product
+<tr><td>vector * float          <td>Scaling of a vector by a scalar
+<tr><td>float  * vector         <td>Scaling of a vector by a scalar
+<tr><td>vector / float          <td>Inverse scaling of a vector by a scalar
+<tr><td>brownian(vector,vector) <td>Makes a random displacement of the first
+                           point by an amount proportional to the
+                           components of the second point
+<tr><td>brownian(vector)        <td>Random displacement of up to 0.1
+<tr><td>color_wheel(x, y, z)    <td>RGB color wheel using x and z (y ignored),
+                           the color returned is based on &lt;x, z>
+                           using the chart below:<p>
+
+<pre>
+	Z-Axis
+	   ^
+	   |
+	   |
+     Green   Yellow
+	 \   /
+	  \ /
+ Cyan ---- * ---- Red  -----> X-Axis
+	  / \
+	 /   \
+      Blue   Magenta
+</pre>
+
+                           Intermediate colors are generated by
+                           interpolation.
+
+<tr><td>dnoise(vector)<br>
+dnoise(vector,float)    <td>Returns a vector (gradient) based on the
+                           location given in the first argument.  If
+                           the second argument is given, it is used as
+                           the number of octaves (repetitions) of the
+                           3D noise function
+<tr><td>dnoise(vector,vector)   <td>Second arg provides more flexible operation
+                           using: &lt;pos scale, noise scale, octaves>
+<tr><td>planar_imagemap(image, vector [, rflag])
+<td rowspan=4>
+                           Image map lookup functions.  If the third
+                           argument is given, then the image will be
+                           tiled, otherwise black is used outside the
+                           bounds of the image.  Note: for planar
+                           image maps only the x and z coordinates of
+                           the second argument are used.
+<tr><td>cylindrical_imagemap(image, vector [, rflag])
+<tr><td>spherical_imagemap(image, vector [, rflag])
+<tr><td>environment_map(vector, environment)
+<tr><td>rotate(vector,vector)   <td>Rotate the point specified in the first
+                           argument by the angles specified in the
+                           second argument (angles in degrees).
+<tr><td>rotate(vector,vector,float)   <td>Rotate the point specified in the first
+                           argument about the axis specified in
+                           the second argument by the angle given
+                           in the third argument
+<tr><td>reflect(vector,vector)  <td>Reflect the first vector about the second
+                           vector (particularly useful in environment
+                           maps)
+<tr><td>trace(vector,vector)    <td>Color resulting from tracing a ray from the
+                           the point given as the first argument in
+                           the direction given by the second argument.
+</table></center>
+
+<h3><a name=2.1.3>Arrays</a></h3>
+<p>
+Arrays are a way to represent data in a convenient list form.  A good
+use for arrays is to hold a number of locations for polygon vertices
+or as locations for objects in successive frames of an animation.<p>
+
+As an example, a way to define a tetrahedron (4 sided solid) is to
+define its vertices, and which vertices make up its faces.  By using
+this information in an object declaration, we can make a tetrahedron
+out of polygons very easily.<p>
+
+<pre>
+   define tetrahedron_faces
+      [<0, 1, 2>, <0, 2, 3>, <0, 3, 1>, <1, 3, 2>]
+
+   define tetrahedron_vertices
+      [<0, 0, sqrt(3)>,
+       <0, (2*sqrt(2)*sqrt(3))/3, -sqrt(3)/3>,
+       <-sqrt(2), -(sqrt(2)*sqrt(3))/3, -sqrt(3)/3>,
+       <sqrt(2), -(sqrt(2)*sqrt(3))/3, -sqrt(3)/3>]
+
+   define tcf tetrahedron_faces
+   define tcv tetrahedron_vertices
+   define tetrahedron
+   object {
+     object { polygon 3,tcv[tcf[0][0]],tcv[tcf[0][1]],tcv[tcf[0][2]]} +
+     object { polygon 3,tcv[tcf[1][0]],tcv[tcf[1][1]],tcv[tcf[1][2]]} +
+     object { polygon 3,tcv[tcf[2][0]],tcv[tcf[2][1]],tcv[tcf[2][2]]} +
+     object { polygon 3,tcv[tcf[3][0]],tcv[tcf[3][1]],tcv[tcf[3][2]]}
+   }
+</pre>
+<p>
+What happened in the object declaration is that each polygon grabbed a
+series of vertex indices from the array tetrahedron_faces, then used
+that index to grab the actual location in space of that vertex.<p>
+
+Another example is to use an array to store a series of view
+directions so that we can use animation to generate a series of very
+distinct renders of the same scene (the following example is how the
+views for an environment map are generated):<p>
+
+<pre>
+   define location <0, 0, 0>
+   define at_vecs [<1, 0, 0>, <-1, 0, 0>, < 0, 1, 0>, < 0,-1, 0>,
+                   < 0, 0,-1>, < 0, 0, 1>]
+   define up_vecs [< 0, 1, 0>, < 0, 1, 0>, < 0, 0, 1>, < 0, 0,-1>,
+                   < 0, 1, 0>, < 0, 1, 0>]
+
+   // Generate six frames
+   start_frame 0
+   end_frame 5
+
+   // Each frame generates the view in a specific direction.  The
+   // vectors stored in the arrays at_vecs, and up_vecs turn the
+   // camera in such a way as to generate image maps correct for using
+   // in an environment map.
+   viewpoint {
+      from location
+      at location + at_vecs[frame]
+      up up_vecs[frame]
+      ...
+    }
+</pre>
+
+<h3><a name=2.1.4>Conditional Expressions</a></h3>
+<p>
+Conditional expressions are used in one of two places: conditional
+processing of declarations (see section 2.7) or conditional value
+functions.<p>
+
+cexper has one of the following forms:<p>
+
+<blockquote>
+   !cexper<br>
+   cexper &amp;&amp; cexper<br>
+   cexper || cexper<br>
+   float &lt; float<br>
+   float &lt;= float<br>
+   float > float<br>
+   float >= float
+</blockquote>
+
+<p>
+A use of conditional expressions is to define a texture based on other
+expressions, the format of this expression is:
+
+<blockquote>
+   (cexper ? true_value : false_value)
+</blockquote>
+
+<p>
+Where true_value/false_value can be either floating point or vector
+values.  This type of expression is taken directly from the equivalent
+in the C language.  An example of how this is used (from the file
+spot1.pi) is:<p>
+
+<pre>
+   special surface {
+      color white
+      ambient (visible(W, throw_offset) == 0
+               ? 0
+               : (P[0] &lt; 1 ? 1
+                 : (P[0] > throw_length ? 0
+                    : (throw_length - P[0]) / throw_length)))
+      transmission (visible(W, throw_offset) == 1
+                    ? (P[0] &lt; 1 ? 0
+                       : (P[0] > throw_length ? 1
+                          : P[0] / throw_length))
+                    : 1), 1
+      }
+</pre>
+<p>
+
+In this case conditional statements are used to determine the surface
+characteristics of a cone defining the boundary of a spotlight.  The
+amount of ambient light is modified with distance from the apex of the
+cone, the visibility of the cone is modified based on both distance
+and on a determination if the cone is behind an object with respect to
+the source of the light.<p>
+
+
+<h3><a name=2.1.5>Run-Time expressions</a></h3>
+<p>
+There are a few expressions that only have meaning during the
+rendering process:<p>
+
+<blockquote><table cellspacing=1>
+<tr><td align=center>I<td>Direction of the ray that struck the object
+<tr><td align=center>P<td>Point of intersection in object coordinates
+<tr><td align=center>N<td>Normal to the point of intersection in world coordinates
+<tr><td align=center>W<td>Point of intersection in world coordinates
+<tr><td align=center>U<td>The u/v/w coordinate of the intersection point
+<tr><td align=center>x,y,z<td>Components of the point in object coordinates
+<tr><td align=center>u,v,w<td>Components of the uv-coordinate of the point
+</table></blockquote>
+
+<p>
+These expressions describe the interaction of a ray and an object.  To
+use them effectively, you need to understand the distinction between
+world coordinates, object coordinates, and u/v coordinates.  Object
+coordinates describe a point or a direction with respect to an object
+as it was originally defined.  World coordinates describe the same
+point after it has been rotated/scaled/translated.  u/v coordinates
+describe the point in a way natural to a particular object type (e.g.,
+latitude and longitude for a sphere).  Typically texturing is done in
+either object coordinates or u/v coordinates so that as the object is
+moved around the texture will move with it.  On the other hand shading
+is done in world coordinates.<p>
+
+The variables u, v, and w are specific to each surface type and in
+general are the natural mapping for the surface (e.g., latitude and
+longitude on a sphere)  In general u varies from 0 to 1 as you go
+around an object and v varies from 0 to one as you go from the bottom
+to the top of an object.  These variables can be used in a couple of
+ways, to tell Polyray to only render portions of a surface within
+certain uv bounds, or they can be used as arguments to expressions in
+textures or displacement functions.<p>
+
+Not all primitives set meaningful values for u and v, those that do
+are:<p>
+
+<blockquote>
+   bezier, cone, cylinder, disc, height fields, NURB, parabola,
+   parametric, sphere, torus, patch
+</blockquote>
+
+<p>
+Other surface types will simply have u=x, v=y, w=z.  An intersection
+with a gridded object will use the u/v coordinates of the object
+within the grid.<p>
+
+See the file uvtst.pi in the data archives for an example of using uv
+bounds on objects.  The file spikes.pi demonstrates using uv as
+variables in a displacement surface.  The file bezier1.pi demonstrates
+using uv as variables to stretch an image over the surface of a bezier
+patch.<p>
+
+The meanings of some of these variables are slightly different when
+creating particle systems, or when coloring the background
+of an image<p>
+
+
+<h3><a name=2.1.6>Named Expressions</a></h3>
+<p>
+A major convenience for creating input files is the ability to create
+named definitions of surface models, object definitions, vectors, etc.
+The way a value is defined takes one of the following forms:<p>
+
+<center><table>
+<tr><td>define token expression<td>          float, vector, array, cexper
+<tr><td>define token "str..."<td>            string expression
+<tr><td>define token object { ... }<td>
+<tr><td>define token surface { ... }<td>
+<tr><td>define token texture { ... }<td>
+<tr><td>define token transform { ... }<td>   Each entry may be one of
+				  scale/translate/rotate/shear
+<tr><td>define token particle { ... }<td>
+</table></center><p>
+
+Objects, surfaces, and textures can either be instantiated as-is by
+using the token name alone, or it can be instantiated and modified:<p>
+
+<pre>   token,</pre>
+or
+<pre>   token { ... modifiers ... },</pre>
+<p>
+Polyray keeps track of what type of entity the token represents and
+will parse the expressions accordingly.<P>
+
+Note: It is not possible to have two types of entities referred to by
+the same name.  If a name is reused, then a warning will be printed,
+and all references to that name will use the new definition from that
+point on.<p>
+
+
+<h4><a name=2.1.6.1>Static variables</a></h4>
+<p>
+Static variables are a way to retain variable values (expressions,
+objects, textures, ...) from frame to frame of an animation.  Instead
+of the normal declaration of a variable:
+
+<pre>   define xyz 32 * frame</pre>
+
+you would do something like this:
+
+<pre>   if (frame == start_frame)
+      static define xyz 42
+   else
+      static define xyz (xyz + 0.1)</pre>
+<p>
+The big differences between a static define and a define are that the
+static variable will be retained from frame to frame, and the static
+variable actually replaces any previous definitions rather than simply
+overloading them.<p>
+
+The static variables have an additional use beyond simple arithmetic
+on variables.  By defining something that takes a lot of processing at
+parse time (like height fields and large image maps), you can make
+them static in the first frame and simply instantiate them every frame
+after that.<p>
+
+One example of this would be to spin a complex height field, if you
+have to create it every frame, there is a long wait while Polyray
+generates the field.  The following declarations would be a better
+way:
+
+<pre>
+   if (frame == start_frame)
+      static define sinsf
+         object {
+            smooth_height_fn 128, 128, -2, 2, -2, 2,
+                             0.25 * sin(18.85 * x * z + theta_offset)
+            shiny_red
+            }
+   ...
+   sinsf { rotate &lt;0, 6*frame, 0> }
+   ...</pre>
+
+<p>
+Several examples of how static variables can be used are found in the
+animation directory in the data file archive.  Two that make extensive
+use of static variables are movsph.pi, which bounces several spherical
+blob components around inside a box, and cannon.pi which points a
+cannon in several directions, firing balls once it is pointed.<p>
+
+Warning:  A texture inside a static object should ONLY be static
+itself.  The reason is that between frames, every non-static thing is
+deallocated.  If you have things inside a static object that point to
+a deallocated pointer, you will most certainly crash the program.
+Sorry, but detecting these things would be too hard and reallocating
+all the memory would take up too much space.<p>
+
+
+<h4><a name=2.1.6.2>Lazy Evaluation</a></h4>
+<p>
+Normally, Polyray tries to reduce the amount of time and space
+necessary for evaluating and storing variables and expressions.  For
+example, if you had the following definition of x:
+
+<pre>   define x 2 * 3</pre>
+
+<p>
+Polyray would store 6 rather than the entire expression.  This can
+cause problems in certain circumstances if Polyray decides to reduce
+the expression too soon.  The problem is most notable in particle
+systems since the expression that is used in it's declaration is used
+for the life of the particle system.  An example of the problem would
+be a declaration like:
+
+<pre>   define t (frame - start_frame) / (end_frame - start_frame)</pre>
+
+<p>
+When Polyray encounters this it will store a value for t that is
+between 0 (for the first frame) and 1 (for the last frame).  This
+great, up until you declare a particle system with something like:
+
+<pre>
+   if (frame == start_frame)
+      define partx
+      particle {
+         ...
+         death (t > 0.5 ? 1 : 0)
+         }
+</pre>
+
+<p>
+Clearly the intent here is that the particles created by this system
+will die halfway through the animation (t > 0.5).  This won't happen,
+since Polyray will evaluate the value of t at the time that partx is
+declared, and store the expression (0 > 0.5 ? 1 : 0), which then
+reduces to 0.  This means the particle will never die.<p>
+
+To avoid this difficulty, the keyword noeval can be added to a
+definition to force Polyray to postpone evaluation.  The declaration
+of t would now be:
+
+<pre>
+   define noeval t (frame - start_frame) / (end_frame - start_frame)
+</pre>
+<p>
+When partx is declared, the entire expression is now used and the
+particles will die at the appropriate time.  Note that noeval is
+always the last keyword in a definition, and it works correctly with
+static definitions as well as normal ones.<p>
+
+
+<h2><a name=2.2>Definition of the viewpoint</a></h2>
+
+The viewpoint and its associated components define the position and
+orientation the view will be generated from.<p>
+
+The format of the declaration is:
+
+<pre>
+    viewpoint {
+       from vector
+       at vector
+       up vector
+       angle float
+       hither float
+       resolution float, float
+       aspect float
+       yon float
+       max_trace_depth float
+       aperture float
+       max_samples float
+       focal_distance float
+       image_format float
+       pixel_encoding float
+       pixelsize float
+       antialias float
+       antialias_threshold float
+     }
+</pre>
+
+<p>
+All of the entries in the viewpoint declaration are optional and have
+reasonable default values (see below).  The order of the entries
+defining the viewpoint is not important, unless you redefine some
+field. (In which case the last is used.)<p>
+
+The parameters are:
+
+<center><table border cellspacing=1 cellpadding=3>
+<caption align=bottom>Parameters of the <i>viewpoint</i> Definition</caption>
+<tr><th>Parameter<th>Description
+<tr><td>aspect<td>The ratio of width to height. (Default: 1.0.)
+<tr><td>at<td>The center of the image, in  world
+                        coordinates. (Default: &lt;0, 0, 0>)
+<tr><td>angle<td>The field of view (in degrees), from the
+                        center of the top row to the center of the
+                        bottom row. (Default: 45)
+<tr><td>from<td>The location of the eye. (Default: &lt;0, 0, -1>)
+<tr><td>hither<td>Distance to front of view pyramid.  Any
+                        intersection closer  than this value will be
+                        ignored. (Default: 1.0e-3)
+<tr><td>resolution<td>Number of columns and rows in the image.
+                        (Default: 256x256)
+<tr><td>up<td>Which direction is up (Default: &lt;0, 1, 0>)
+<tr><td>yon<td>Distance to back of view pyramid.  Any
+                        intersection beyond this distance will be
+                        ignored. (Default: 1.0e5)
+<tr><td>max_trace_depth<td>This allows you to tailor the amount of
+                        recursion allowed for scenes with reflection
+                        and/or transparency. (Default: 5)
+<tr><td>aperture<td>If larger than 0, then extra rays are shot
+                        (controlled by max_samples) to produce a
+                        blurred image. Good values are between 0.1
+                        and 0.5. (Default: 0)
+<tr><td>max_samples<td>Number of rays/pixel when performing focal
+                        blur (Default: 4)
+<tr><td>focal_distance<td>Distance from the eye to the point that things
+                        are in focus, this defaults to the distance
+                        between from and at.
+<tr><td>image_format<td>If 0 then normal image, if 1 then depth image
+<tr><td>pixel_encoding<td>If 0 then uncompressed, if 1 then image is RLE
+<tr><td>pixelsize<td>Number of bits/pixel in image (Default: 16)
+<tr><td>antialias<td>Level of antialiasing to use (Default: 0)
+<tr><td>antialias_threshold<td>Threshold to start antialiasing
+                        (Default: 0.01)
+</table></center><p>
+
+The view vectors will be coerced so that they are perpendicular to the
+vector from the eye (from) to the point of interest (at).<p>
+
+A typical declaration is:
+
+<pre>
+   viewpoint {
+      from &lt;0, 5, -5>
+      at   &lt;0, 0,  0>
+      up   &lt;0, 1,  0>
+      angle 30
+      resolution 320, 160
+      aspect 2
+    }
+</pre>
+
+<p>
+In this declaration the eye is five units behind the origin, five
+units above the x-z plane and is looking at the origin.  The up
+direction is aligned with the y-axis, the field of view is 30 degrees
+and the output file will default to 320x160 pixels.<p>
+
+In this example it is assumed that pixels are square, and hence the
+aspect ratio is set to width/height.  If you were generating an image
+for a screen that has pixels half as wide as they are high then the
+aspect ratio would be set to one.<p>
+
+Note that you can change from left handed coordinates (the default for
+Polyray) to right handed by using a negative aspect ratio (e.g.,
+aspect -4/3).<p>
+
+
+<h2><a name=2.3>Objects/Surfaces</a></h2>
+<p>
+In order to make pictures, the light has to hit something.  Polyray
+supports several primitive objects.  The following sections give the
+syntax for describing the primitives, as well as how more complex
+primitives can be built from simple ones.<p>
+
+An object declaration is how polyray associates a surface with its
+lighting characteristics, and its orientation.  This declaration
+includes one of the primitive shapes (sphere, polygon, ...), and
+optionally: a texture declaration (set to a matte white if none is
+defined), orientation declarations, or a bounding box declaration.<p>
+
+The format the declaration is:
+
+<pre>
+   object {
+      shape_declaration
+      [texture_declaration]
+      [translate/rotate/scale declarations]
+      [subdivision declarations]
+      [displacement declaration]
+      [shading flag declaration]
+      [bounding box declaration]
+      [u/v bounds declaration]
+    }
+</pre>
+
+<p>
+The following sub-sections describe the format of the individual parts
+of an object declaration.  (Note:  The shape declaration MUST be first
+in the declaration, as any operations that follow have to have data to
+work on.)
+
+<h3><a name=2.3.1>Object Modifiers</a></h3>
+<p>
+Object modifiers are statements within an object declaration that are
+used to move and/or change the shape of the object.<p>
+
+The declarations are processed in the order they appear in the
+declaration, so if you want to resize and object before moving it, you
+need to put the scale statement before the translation statement.  The
+exception to this are displacement and u/v bounds.  These act on the
+underlying shape and are applied prior to any other object modifiers,
+regardless of where they appear in the object declaration.
+
+<h4><a name=2.3.1.1>Position and Orientation Modifiers</a></h4>
+
+The position, orientation, and size of an object can be modified
+through one of four linear transformations: translation, rotation,
+scaling, and shear.  Other modifications that can be made to the hape
+are displacement and u/v bounding.
+
+
+<h5><a name=2.3.1.1.1>Translation</a></h5>
+<p>
+Translation moves the position of an object by the number of units
+specified in the associated vector.  The format of the declaration is:
+
+<pre>
+   translate &lt;xt, yt, zt>
+</pre>
+
+<h5><a name=2.3.1.1.2>Rotation</a></h5>
+<p>
+Rotation revolves the position of an object about the x, y, and z axes
+(in that order).  The amount of rotation is specified in degrees for
+each of the axes.  The direction of rotations follows a left-handed
+convention: if the thumb of your left hand points along the positive
+direction of an axis, then the direction your fingers curl is the
+positive direction of rotation.  (A negative aspect ratio in the
+viewpoint flips everything around to a right handed system.)<p>
+
+The format of the declaration is:
+
+<pre>
+   rotate &lt;xr, yr, zr>
+</pre>
+<p>
+For example the declaration:
+
+<pre>
+   rotate &lt;30, 0, 20>
+</pre>
+<p>
+will rotate the object by 30 degrees about the x axis, followed by 20
+degrees about the z axis.<p>
+
+Remember: Left Handed Rotations.
+
+
+<h5><a name=2.3.1.1.3>Scaling</a></h5>
+<p>
+Scaling alters the size of an object by a given amount with respect to
+each of the coordinate axes.  The format of the declaration is:
+
+<pre>
+   scale &lt;xs, ys, zs>
+</pre>
+<p>
+Note that using 0 for any of the components of a scale is a bad idea.
+It may result in a division by zero in Polyray, causing a program
+crash.  Use a small number like 1.0e-5 to flatten things.  Usually you
+will just want to use 1 for components that don't need scaling.
+
+
+<h5><a name=2.3.1.1.4>Shear</a></h5>
+<p>
+A less frequently used, but occasionally useful transformation is
+linear shear.  Shear scales along one axis by an amount that is
+proportional to the location on another axis.  The format of the
+declaration is:
+
+<pre>
+   shear yx, zx, xy, zy, xz, yz
+</pre>
+<p>
+Typically only one or two of the components will be non-zero, for
+example the declaration:
+
+<pre>
+   shear 0, 0, 1, 0, 0, 0
+</pre>
+<p>
+will shear an object more and more to the right as y gets larger and
+larger.  The order of the letters in the declaration is descriptive,
+shear ... ab, ... means shear along direction a by the amount ab times
+the position b.<p>
+
+This declaration should probably be split into three: one that
+associates shear in x with the y and z values, one that associates
+shear in y with x and z values, and one that associates shear in z
+with x and y values.<p>
+
+You might want to look at the file xander.pi - this uses shear on
+boxes to make diagonally slanted parts of letters.
+
+
+<h5><a name=2.3.1.1.5>Displace</a></h5>
+<p>
+The displacement operation causes a modification of the shape of an
+object as it is being rendered.  The amount and direction of the
+displacement are specified by the statement:
+
+<pre>
+   displace vector</pre>
+or<pre>
+   displace float</pre>
+<p>
+
+If a vector expression is given, then Polyray will displace each
+vertex in the surface by the vector.  If a floating point expression
+is given, then Polyray will displace the surface along the direction
+of the normal, by the amount given in the expression.<p>
+
+For effective results, the value of u_steps and v_steps should be set
+fairly high.  Polyray subdivides the surface, then performs the
+displacement.  If there are too few subdivisions of the surface then
+the result will be a very coarse looking object.<p>
+
+An example of an object that has a displacement is shown below.  The
+displacement in the outer object is applied to each of the two spheres
+within.
+
+<pre>
+  object {
+    object {
+      sphere &lt;0,-1.5, 0>, 2
+      u_steps 32
+      v_steps 64
+      shiny_red
+    } + object {
+      sphere &lt;0, 1.5, 0>, 2
+      u_steps 32
+      v_steps 64
+      shiny_blue
+      translate &lt;0, -1.5, 0>
+      rotate &lt;-20, 0, 30>
+      translate &lt;0, 2.25, 0>
+    }
+    displace 0.5 * sin(5*y)
+  }
+</pre>
+
+
+<h5><a name=2.3.1.1.6>UV Bounds</a></h5>
+<p>
+By adjusting the value of the u/v bounds, it is possible to only
+render a selected portion of a surface.  The format of the declaration
+is:
+
+<pre>
+   uv_bounds low_u, high_u, low_v, high_v
+</pre>
+
+<p>
+For example, the following declaration will result in a wedge shaped
+portion of a sphere:
+
+<pre>
+   object {
+      sphere &lt;-2, 2, 0>, 1
+      uv_bounds 0.3, 1.0, 0.0, 0.8
+    }
+</pre>
+
+The same effect could be achieved through the use of CSG with one or
+more clipping planes.  For most purposes (e.g., creating a hemisphere
+by setting u_low to 0.5) the uv_bounds will easier to create and
+faster to render.<p>
+
+
+<h4><a name=2.3.1.2>Bounding box</a></h4>
+<p>
+In order to speed up the process of determining if a ray intersects an
+object and in order to define good bounds for surfaces such as
+polynomials and implicit surfaces, a bounding box can be specified.  A
+short example of how it is used to define bounds of a polynomial:
+
+<pre>
+   define r0 3
+   define r1 1
+   define torus_expression (x^2 + y^2 + z^2 - (r0^2 + r1^2))^2 -
+                           4 * r0^2 * (r1^2 - z^2)
+   object {
+      polynomial torus_expression
+      shiny_red
+      bounding_box &lt;-(r0+r1), -(r0+r1), -r1>, &lt; (r0+r1),  (r0+r1),  r1>
+    }
+</pre>
+<p>
+The test for intersecting a ray against a box is much faster than
+performing the test for the polynomial equation.  In addition the box
+helps the scan conversion process determine where to look for the
+surface of the torus.
+
+
+<h4><a name=2.3.1.3>Subdivision of Primitives</a></h4>
+<p>
+The amount of subdivision of a primitive that is performed before it
+is displayed as polygons is tunable.  These declarations are used for
+scan conversion of object, when creating displacement surfaces, and to
+determine the quality of an implicit function.  The declarations are:
+
+<pre>
+   u_steps n
+   v_steps m
+   w_steps l
+   uv_steps n, m
+   uv_steps n, m, l
+</pre>
+<p>
+Where u generally refers to the number of steps around the primitive
+(the number of steps around the equator of a sphere for example).  The
+parameter v refers to the number of steps along the primitive
+(latitudes on a sphere). Cone and cylinder primitives only require 1
+step along v, but for smoothness may require many steps in u.<p>
+
+For blobs, polynomials, and implicit surfaces, the u_steps component
+defines how many subdivisions along the x-axis, the v_steps component
+defines how many subdivisions along the y-axis, and the w_steps
+component defines how many subdivision along the z-axis.<p>
+
+
+<h4><a name=2.3.1.4>Shading Flags</a></h4>
+<p>
+It is possible to tune the shading that will be performed for each
+object.  The values of each bit in the flag has the same meaning as
+that given for global shading previously:<p>
+
+<center><table border cellpadding=3>
+<caption align=bottom>Meaning of the bits in the shading flags</caption>
+<tr><th>Number<th>ID<th>Description
+<tr><td align=center>1<br>2<br>4<br>8<br>16<br>32
+<td align=center>Shadow_Check<br>Reflect_Check<br>Transmit_Check<br>
+Two_Sides<br>UV_Check<br>Cast_Shadow
+<td>
+Shadows will be generated on the object<br>
+Reflectivity will be tested<br>
+Check for refraction<br>
+If on, highlighting will be performed on both sides of a surface<br>
+If on then u/v coordinates are calculated<br>
+If off then the object doesn't cast a shadow
+</table></center><p>
+
+By default, all objects have the following flags set: Shadow_Check,
+Reflect_Chect, Transmit_Check, UV_Check, and Cast_Shadow.  The two
+sides check is normally off.<p>
+
+The declaration has the form:
+
+<pre>
+   shading_flags xx
+</pre>
+<p>
+For example, if the value 50 (32 + 16 + 2) is used for xx above, then
+this object can be reflective and will cast shadows, however there
+will be no tests for transparency, there will be no shading of the
+back sides of surfaces, and there will be no shadows on the surface.<p>
+
+Note: the shading flag only affects the object in which the
+declaration is made.  This means that if you want the shading values
+affected for all parts if a CSG object, then you will need a
+declaration in every component.
+
+
+<h3><a name=2.3.2>Primitives</a></h3>
+<p>
+Primitives are the lowest level of shape description.  Typically a
+scene will contain many primitives, appearing either individually or
+as aggregates using either Constructive Solid Geometry (CSG)
+operations or gridded objects.<p>
+
+Descriptions of each of the primitive shapes supported by Polyray, as
+well as references to data files that demonstrate them are given in
+the following subsections.  Following the description of the
+primitives are descriptions of how CSG and grids can be built.
+
+
+<h4><a name=2.3.2.1>Bezier patches</a></h4>
+<p>
+A Bezier patch is a form of bicubic patch that interpolates its
+control vertices.  The patch is defined in terms of a 4x4 array of
+control vertices, as well as several tuning values.<p>
+
+The format of the declaration is:
+
+<pre>
+   bezier subdivision_type, flatness_value,
+          u_subdivisions, v_subdivision,
+          [ 16 comma-separated vertices, i.e.
+             &lt;x0, y0, z0>, &lt;x1, y1, z1>, ..., &lt;x15, y15, z15> ]
+</pre>
+<p>
+The subdivision_type and flatness_value are no longer used by Polyray.
+They are retained in the declaration for backwards compatibility.<p>
+
+The number of levels of subdivision of the patch, in each direction,
+is controlled by either the u_subdivisions and v_subdivisions given in
+the bezier shape declaration or by the value of uv_steps 
+ if given later in the object declaration.
+The more subdivisions allowed, the smoother the approximation to the patch,
+however storage and processing time go up.<p>
+
+An example of a bezier patch is:
+
+<pre>
+   object {
+      bezier 2, 0.05, 3, 3,
+         &lt;0, 0, 2>, &lt;1, 0, 0>, &lt;2, 0, 0>, &lt;3, 0,-2>,
+         &lt;0, 1, 0>, &lt;1, 1, 0>, &lt;2, 1, 0>, &lt;3, 1, 0>,
+         &lt;0, 2, 0>, &lt;1, 2, 0>, &lt;2, 2, 0>, &lt;3, 2, 0>,
+         &lt;0, 3, 2>, &lt;1, 3, 0>, &lt;2, 3, 0>, &lt;3, 3,-2>
+     uv_steps 8, 8
+     rotate &lt;30, -70, 0>
+     shiny_red
+   }
+</pre>
+
+<h4><a name=2.3.2.2>Blob</a></h4>
+<p>
+A blob describes a smooth potential field around one or more
+spherical, cylindrical, or planar components.<p>
+
+The format of the declaration is:
+
+<pre>
+   blob threshold:
+      blob_component1
+      [, blob_component2 ]
+      [, etc. for each component ]
+</pre>
+<p>
+The threshold is the minimum potential value that will be considered
+when examining the interaction of the various components of the blob.
+Each blob component one of two forms:
+
+<pre>
+   sphere &lt;x, y, z>, strength, radius
+   cylinder &lt;x0, y0, z0>, &lt;x1, y1, z1>, strength, radius
+   plane &lt;nx, ny, nz>, d, strength, dist
+   torus &lt;x, y, z>, &lt;dx, dy, dz>, major, strength, minor
+</pre>
+<p>
+The strength component describes how strong the potential field is
+around the center of the component, the radius component describes the
+maximum distance at which the component will interact with other
+components.  For a spherical blob component the vector &lt;x,y,z> gives
+the center of the potential field around the component.  For a
+cylindrical blob component the vector &lt;x0, y0, z0> defines one end of
+the axis of a cylinder, the vector &lt;x1, y1, z1> defines the other end
+of the axis of a cylinder.  A planar blob component is defined by the
+standard plane equation with &lt;nx, ny, nz> defining the normal and 'd'
+defining the distance of the plane from the origin along the normal.<p>
+
+Note: The ends of a cylindrical blob component are given hemispherical
+caps.<p>
+
+Note: toroidal blob components won't render correctly in raytracing.
+The numerical precision of a PC is insufficient.  It will work
+correctly in scan conversion or raw triangle output.<p>
+
+Note: The colon and the commas in the declaration really are
+important.<p>
+
+
+An example of a blob is:
+
+<pre>
+  object {
+    blob 0.5:
+      cylinder &lt;0,  0, 0>, &lt;5, 0, 0>, 1, 0.7,
+      cylinder &lt;1, -3, 0>, &lt;3, 2, 0>, 1, 1.4,
+      sphere &lt;3, -0.8, 0>, 1, 1,
+      sphere &lt;4,  0.5, 0>, 1, 1,
+      sphere &lt;1,  1,   0>, 1, 1,
+      sphere &lt;1,  1.5, 0>, 1, 1,
+      sphere &lt;1,  2.7, 0>, 1, 1
+
+    shiny_red
+  }
+</pre>
+<p>
+Note: since a blob is essentially a collection of 4th order
+polynomials, it is possible to specify which quartic root solver to
+use.  See section 2.3.2.15, for a description of the root_solver
+statement.<p>
+
+
+<h4><a name=2.3.2.3>Box</a></h4>
+<p>
+A box is rectangular solid that has its edges aligned with the x, y,
+and z axes.  it is defined in terms of two diagonally opposite
+corners.  The alignment can be changed by rotations after the shape
+declaration.<p>
+
+The format of the declaration is:
+
+<pre>
+   box &lt;x0, y0, z0>, &lt;x1, y1, z1>
+</pre>
+<p>
+Usually the convention is that the first point is the front-lower-left
+point and the second is the back-upper-right point.  The following
+declaration is four boxes stacked on top of each other:
+
+<pre>
+  define pyramid
+    object {
+        object { box &lt;-1, 3, -1>, &lt;1, 4, 1> }
+      + object { box &lt;-2, 2, -2>, &lt;2, 3, 2> }
+      + object { box &lt;-3, 1, -3>, &lt;3, 2, 3> }
+      + object { box &lt;-4, 0, -4>, &lt;4, 1, 4> }
+      matte_blue
+    }
+</pre>
+
+
+<h4><a name=2.3.2.4>Cone</a></h4>
+<p>
+A cone is defined in terms of a base point, an apex point, and the
+radii at those two points.  Note that cones are not closed (you must
+use discs to cap them).<p>
+
+The format of the declaration is:
+
+<pre>
+   cone &lt;x0, y0, z0>, r0, &lt;x1, y1, z1>, r1
+</pre>
+<p>
+An example declaration of a cone is:
+
+<pre>
+   object {
+     cone &lt;0, 0, 0>, 4, &lt;4, 0, 0>, 0
+     shiny_red
+   }
+</pre>
+
+<h4><a name=2.3.2.5>Cylinder</a></h4>
+<p>
+A cylinder is defined in terms of a bottom point, a top point, and its
+radius.  Note that cylinders are not closed.<p>
+
+The format of the declaration is:
+
+<pre>
+   cylinder &lt;x0, y0, z0>, &lt;x1, y1, z1>, r
+</pre>
+
+An example of a cylinder is:
+
+<pre>
+   object {
+     cylinder &lt;-3, -2, 0>, &lt;0, 1, 3>, 0.5
+     shiny_red
+   }
+</pre>
+
+
+
+<h4><a name=2.3.2.6>Disc</a></h4>
+<p>
+A disc is defined in terms of a center a normal and either a radius,
+or using an inner radius and an outer radius.  If only one radius is
+given, then the disc has the appearance of a (very) flat coin.  If two
+radii are given, then the disc takes the shape of an annulus (washer)
+where the disc extends from the first radius to the second radius.
+Typical uses for discs are as caps for cones and cylinders, or as
+ground planes (using a really big radius).<p>
+
+The format of the declaration is:
+<pre>
+   disc &lt;cx, cy, cz>, &lt;nx, ny, nz>, r</pre>
+or<pre>
+   disc &lt;cx, cy, cz>, &lt;nx, ny, nz>, ir, or</pre>
+<p>
+The center vector &lt;cx,cy,cz> defines where the center of the disc is
+located, the normal vector &lt;nx,ny,nz> defines the direction that is
+perpendicular to the disc.  i.e. a disc having the center &lt;0,0,0> and
+the normal &lt;0,1,0> would put the disc in the x-z plane with the y-axis
+coming straight out of the center.<p>
+
+An example of a disc is:
+
+<pre>
+   object {
+     disc &lt;0, 2, 0>, &lt;0, 1, 0>, 3
+     rotate &lt;-30, 20, 0>
+     shiny_red
+   }
+</pre>
+
+Note: a disc is infinitely thin.  If you look at it edge-on it will
+disappear.<p>
+
+
+<h4><a name=2.3.2.7>Glyphs (TrueType fonts)</a></h4>
+<p>
+The glyph primitive creates shapes similar to the sweep primitive.
+The big difference is that straight line and curved line segments may
+appear in the same contour.  Additionally, the glyph can be made from
+several contours with exterior ones defining the outsides of the shape
+and interior ones defining holes within the glyph.<p>
+
+Typically the glyph primitive will be used in conjunction with the
+utility TTFX (described below) to translate TrueType font information
+into Polyray glyph information.<p>
+
+The following declaration creates a box with a square hole cut out of
+it.
+
+<pre>
+   object {
+     glyph 2
+       contour 4, &lt;0, 0>, &lt;4, 0>, &lt;4, 4>, &lt;0, 4>
+       contour 4, &lt;1, 1>, &lt;1, 3>, &lt;3, 3>, &lt;3, 1>
+     texture { shiny { color red reflection 0.2 } }
+     translate &lt;-2, 0, 0>
+   }
+</pre>
+<p>
+The default placement of glyph coordinates is in the x-y plane and the
+glyph has a depth of one in z (starting at z=0 and going to z=1).  To
+change the depth, just use something like: scale &lt;1, 1, 0.2>.<p>
+
+Each entry in a contour is a 2D point.  If a non-zero z component is
+added then the point is assumed to be an off-curve point and will
+create a curved segment within the contour.  For example, the
+following declaration makes a somewhat star shaped contour with sharp
+corners for the inner parts of the star and rounded curves for the
+outer parts of the star:
+
+<pre>
+  object {
+    glyph 1 contour 14,
+      &lt;r0*cos( 1*dt),r0*sin( 1*dt)>,&lt;r1*cos( 2*dt),r1*sin( 2*dt),1>,
+      &lt;r0*cos( 3*dt),r0*sin( 3*dt)>,&lt;r1*cos( 4*dt),r1*sin( 4*dt),1>,
+      &lt;r0*cos( 5*dt),r0*sin( 5*dt)>,&lt;r1*cos( 6*dt),r1*sin( 6*dt),1>,
+      &lt;r0*cos( 7*dt),r0*sin( 7*dt)>,&lt;r1*cos( 8*dt),r1*sin( 8*dt),1>,
+      &lt;r0*cos( 9*dt),r0*sin( 9*dt)>,&lt;r1*cos(10*dt),r1*sin(10*dt),1>,
+      &lt;r0*cos(11*dt),r0*sin(11*dt)>,&lt;r1*cos(12*dt),r1*sin(12*dt),1>,
+      &lt;r0*cos(13*dt),r0*sin(13*dt)>,&lt;r1*cos(14*dt),r1*sin(14*dt),1>
+  }
+</pre>
+<p>
+The program TTFX.EXE has been included to help with the conversion of
+TrueType fonts from their .TTF format (typically found in the
+/WINDOWS/SYSTEM directory) into the sort of declaration that Polyray
+can understand.  For example,
+
+<pre>
+   ttfx \windows\system\times.ttf Foo > temp.pi</pre>
+or,<pre>
+   ttfx \windows\system\times.ttf Foo 0.2 > temp.pi</pre>
+<p>
+By default, the characters in the string being converted (the word Foo
+above) are packed right next to each other.  If a number follows the
+text string, then the characters are separated by that amount.  A
+spacing of 0.2 has worked pretty well for the fonts I've tried.<p>
+
+If you then add the following line to the top of temp.pi (leaving
+everything else like viewpoint to their defaults)
+
+<pre>
+   light &lt;0, 100, -100>
+</pre>
+
+and render it with
+
+<pre>
+   polyray temp.pi -r 1
+</pre>
+
+you will get a nice rendered image of the word Foo.<p>
+
+Note that the combination of TTFX, Polyray raw triangle output, and
+RAW2POV is a way you can create TrueType characters for use in a
+number of renderers.<p>
+
+
+<h4><a name=2.3.2.8>Implicit Surface</a></h4>
+<p>
+The format of the declaration is:
+
+<pre>
+   function f(x,y,z)
+</pre>
+<p>
+The function f(x,y,z) may be any expression composed of the variables:
+x, y, z, a numerical value (e.g., 0.5), the operators: +, -, *, /, ^,
+and any Polyray supported function.  The code is not particularly
+fast, nor is it totally accurate, however the capability to ray-trace
+such a wide class of functions by a SW program is (I believe) unique
+to Polyray.<p>
+
+The following object is taken from sombrero.pi and is a surface that
+looks very much like diminishing ripples on the surface of water.
+
+<pre>
+   define a_const 1.0
+   define b_const 2.0
+   define c_const 3.0
+   define two_pi_a 2.0 * 3.14159265358 * a_const
+
+   // Define a diminishing cosine surface (sombrero)
+   object {
+     function y - c_const * cos(two_pi_a * sqrt(x^2 + z^2)) *
+                            exp(-b_const * sqrt(x^2 + z^2))
+     matte_red
+     bounding_box &lt;-4, -4, -4>, &lt;4, 4, 4>
+   }
+</pre>
+<p>
+Rendering the following object will show all the places within a
+sphere where the solid noise function takes on the value 0.5.
+
+<pre>
+   object {
+     object {
+       function noise(3*P) - 0.5
+       u_steps 64
+       v_steps 64
+       w_steps 64
+       Lapis_Lazuli
+       bounding_box &lt;-2, -2, -2>, &lt;2, 2, 2>
+     }
+     &amp; object { sphere &lt;0, 0, 0>, 2 }
+     rotate &lt;-10, 20, 0>
+   }
+</pre>
+<p>
+It is quite important to have the bounding box declaration within the
+object where the function is declared.  If that isn't there, Polyray
+will be unable to determine where to look for intersections with the
+surface.  (The bounding box of an implicit function defaults to &lt;-1, -
+1, -1>, &lt;1, 1, 1>.)<p>
+
+
+<h4><a name=2.3.2.9>Height Field</a></h4>
+<p>
+There are two ways that height fields can be specified, either by
+using data stored in a Targa file, or using an implicit function of
+the form y = f(x, z).<p>
+
+The default orientation of a height field is that the entire field
+lies in the square 0 &lt;= x &lt;= 1, 0 &lt;= z &lt;= 1.  File based height fields
+are always in this orientation, implicit height fields can optionally
+be defined over a different area of the x-z plane.  The height value
+is used for y.<p>
+
+
+<h5><a name=2.3.2.9.1>File Based Height Fields</a></h5>
+<p>
+Height fields data can be read from any Targa, GIF, or JPEG format
+file.  A GIF image will be treated as an 8 bit format image as
+described below.  Any color information in the GIF file is ignored.<p>
+
+Note that if you use JPEG images, a grayscale JPEG will be treated as
+an 8 bit format and a color JPEG will be treated as a 24 bit format
+height field.  Due to the lossy nature of JPEG, it is extremely
+unlikely that a color JPEG will be useful as a height field.  It is
+possible that reasonable results can be obtained using grayscale JPEG
+images as height fields (no guarantees).<p>
+
+By using smooth_ in front of the declaration, an extra step is
+performed that calculates normals to the height field at every point
+within the field.  The result of this is a greatly smoothed
+appearance, at the expense of around three times as much memory being
+used.<p>
+
+The format of the declaration is:
+
+<pre>
+   height_field "filename"
+   smooth_height_field "filename"
+</pre>
+
+<h6><a name=2.3.2.9.1.1>8 Bit Format</a></h6>
+<p>
+Each pixel in the file is represented by a single byte.  The value of
+the byte is used as an integer height between -127 and 128.
+
+
+<h6><a name=2.3.2.9.1.2>16 Bit Format</a></h6>
+<p>
+Each pixel in the file is represented by two bytes, low then high.
+The high component defines the integer component of the height, the
+low component holds the fractional part scaled by 255. The entire
+value is offset by 128 to compensate for the unsigned nature of the
+storage bytes.  As an example the values  high = 140, low = 37 would
+be translated to the height:
+
+<pre>
+   (140 + 37 / 256) - 128 = 12.144
+</pre>
+<p>
+similarly if you are generating a Targa file to use in Polyray, given
+a height, add 128 to the height, extract the integer component, then
+extract the scaled fractional component.  The following code fragment
+shows a way of generating the low and high bytes from a floating point
+number.
+
+<pre>
+         unsigned char low, high;
+         float height;
+         FILE *height_file;
+
+         ...
+
+         height += 128.0;
+         high = (unsigned char)height;
+         height -= (float)high;
+         low = (unsigned char)(256.0 * height);
+         fputc(low, height_file);
+         fputc(high, height_file);
+</pre>
+
+<h6><a name=2.3.2.9.1.3>24 Bit Format</a></h6>
+<p>
+The red component defines the integer component of the height, the
+green component holds the fractional part scaled by 255, the blue
+component is ignored.  The entire value is offset by 128 to compensate
+for the unsigned nature of the RGB  values.  As an example the values
+r = 140, g = 37, and b = 0 would be translated to the height:
+
+<pre>
+   (140 + 37 / 256) - 128 = 12.144
+</pre>
+<p>
+similarly if you are generating a Targa file to use in Polyray, given
+a height, add 128 to the height, extract the integer component, then
+extract the scaled fractional component.  The following code fragment
+shows a way of generating the RGB components from a floating point number.
+
+<pre>
+         unsigned char r, g, b;
+         float height;
+         FILE *height_file;
+
+         ...
+
+         height += 128.0;
+         r = (unsigned char)height;
+         height -= (float)r;
+         g = (unsigned char)(256.0 * height);
+         b = 0;
+         fputc(b, height_file);
+         fputc(g, height_file);
+         fputc(r, height_file);
+</pre>
+
+<h6><a name=2.3.2.9.1.4>32 Bit Format</a></h6>
+<p>
+The four bytes of the 32 bit Targa image are used to hold the four
+bytes of a floating point number.  The format of the floating point
+number is machine specific, and the order of the four bytes in the
+image correspond exactly to the order of the four bytes of the
+floating number when it is in memory.<p>
+
+For example, the following code shows how to take a floating point
+number and store it to a file in the format that Polyray will expect.
+You will also need to write the Targa header, etc.<p>
+
+<pre>
+   unsigned char *byteptr;
+   float depth;
+   FILE *ofile;
+
+   ... calculations for depth ...
+
+   /* Store a floating point number as a 32 bit color- this is
+      obviously a machine specific result for the floating point
+      number that is stored.  There is also an assumption here
+      that a float type is exactly 4 bytes and that the
+      size of an unsigned char is exactly 1 byte. */
+   byteptr = (unsigned char *)&amp;depth;
+   fputc(byteptr[0], ofile);
+   fputc(byteptr[1], ofile);
+   fputc(byteptr[2], ofile);
+   fputc(byteptr[3], ofile);
+
+   ...
+</pre>
+
+<h5><a name=2.3.2.9.2>Implicit Height Fields</a></h5>
+<p>
+Another way to define height fields is by evaluating a mathematical
+function over a grid.  Given a function y = f(x, z), Polyray will
+evaluate the function over a specified area and generate a height
+field based on the function.  This method can be used to generate
+images of many sorts of functions that are not easily represented by
+collections of simpler primitives.<p>
+
+The valid formats of the declaration are:
+
+<pre>
+   height_fn xsize, zsize, minx, maxx, minz, maxz, expression
+   height_fn xsize, zsize, expression
+   smooth_height_fn xsize, zsize, minx, maxx, minz, maxz, expression
+   smooth_height_fn xsize, zsize, expression
+</pre>
+<p>
+If the four values minx, maxx, minz, and maxz are not defined then the
+default square 0 &lt;= x &lt;= 1, 0 &lt;= z &lt;= 1 will be used.<p>
+
+For example,
+
+<pre>
+   // Define constants for the sombrero function
+   define a_const 1.0
+   define b_const 2.0
+   define c_const 3.0
+   define two_pi_a 2.0 * 3.14159265358 * a_const
+
+   // Define a diminishing cosine surface (sombrero)
+   object {
+     height_fn 80, 80, -4, 4, -4, 4,
+       c_const * cos(two_pi_a * sqrt(x^2 + z^2)) *
+                 exp(-b_const * sqrt(x^2 + z^2))
+     shiny_red
+   }
+</pre>
+<p>
+will build a height field 80x80, covering the area from -4 &lt;= x &lt;= 4,
+and -4 &lt;= z &lt;= 4.<p>
+
+Compare the run-time performance and visual quality of the sombrero
+function as defined in sombfn.pi with the sombrero function as defined
+in sombrero.pi.  The former uses a height field representation and
+renders quite fast.  The latter uses a very general function
+representation and gives smoother but very slow results.<p>
+
+
+<h4><a name=2.3.2.10>Lathe surfaces</a></h4>
+<p>
+A lathe surface is a polygon that has been revolved about the y-axis.
+This surface allows you to build objects that are symmetric about an
+axis, simply by defining 2D points.<p>
+
+The format of the declaration is:
+
+<pre>
+    lathe type, direction, total_vertices,
+       &lt;vert1.x,vert1.y,vert1.z>
+       [, &lt;vert2.x, vert2.y, vert2.z>]
+       [, etc. for total_vertices vertices]
+</pre>
+<p>
+The value of type is either 1, or 2.  If the value is 1, then the
+surface will simply revolve the line segments.  If the value is 2,
+then the surface will be represented by a spline that approximates the
+line segments that were given.  A lathe surface of type 2 is a very
+good way to smooth off corners in a set of line segments.<p>
+
+The value of the vector direction is used to change the orientation of
+the lathe.  For a lathe surface that goes straight up and down the y-
+axis, use &lt;0, 1, 0> for direction.  For a lathe surface that lies on
+the x-axis, you would use &lt;1, 0, 0> for the direction.<p>
+
+Note that CSG will really only work correctly if you close the lathe -
+that is either make the end point of the lathe the same as the start
+point, or make the x-value of the start and end points equal zero.
+Lathes, unlike polygons are not automatically closed by Polyray.<p>
+
+Note: since a splined lathe surface (type = 2) is a 4th order
+polynomial, it is possible to specify which quartic root solver to
+use.  See section 2.3.2.15 for a description of the root_solver
+statement.
+
+
+<h4><a name=2.3.2.11>NURBS</a></h4>
+<p>
+Polyray supports the general patch type, Non-Uniform Rational B-
+Splines (NURBS).  All that is described here is how they are declared
+and used in Polyray.  For further background and details on NURBS,
+refer to the literature.<p>
+
+They are declared with the following syntax:
+
+<pre>
+   nurb u_order, u_points, v_order, v_points,
+        u_knots, v_knots, uv_mesh</pre>
+or<pre>
+   nurb u_order, u_points, v_order, v_points, uv_mesh</pre>
+<p>
+Where each part of the declaration has the following format and
+definition,<p>
+
+<center><table border cellspacing=1 cellpadding=3>
+<tr><th>Name<th>Format<th>Definition
+<tr><td>u_order<td>integer<td>One more than the power of the spline in
+                           the u direction.  (If u_order = 4, then it
+                           will be a cubic patch.)
+<tr><td>u_points<td>integer<td>The number of vertices in each row of the
+                           patch mesh
+<tr><td>v_order<td>integer<td>One more than the power of the spline
+                           in v direction.
+<tr><td>v_points<td>integer<td>The number of rows in the patch mesh
+<tr><td>u_knots<td>[...]<td>Knot values in the u direction
+<tr><td>v_knots<td>[...]<td>Knot values in the v direction
+<tr><td>uv_mesh<td>[[...]<p>[...]]<td>An array of arrays of vertices.  Each
+                           vertex may have either three or four
+                     components.  If the fourth component is
+                           set then the spline will be rational.
+                           If the vertex has only three components
+                           then the homogenous (fourth) component is
+                           assumed to be one. The homogenous
+                           component must be greater than 0.
+</table></center><p>
+
+For example, the following is a complete declaration of a NURB patch
+
+<pre>
+   object {
+     nurb 4, 6, 4, 5,
+         [0, 0, 0, 0, 1.5, 1.5, 3, 3, 3, 3], // Non-uniform knots
+         [0, 0, 0, 0, 1, 2, 2, 2, 2],        // Uniform open knots
+	[[&lt;0,0,0>, &lt;1,0, 3>, &lt;2,0,-3>,     &lt;3,0, 3>, &lt;4,0,0>],
+	 [&lt;0,1,0>, &lt;1,1, 0>, &lt;2,1, 0>,     &lt;3,1, 0>, &lt;4,1,0>],
+	 [&lt;0,2,0>, &lt;1,2, 0>, &lt;2,2, 5,2>,   &lt;3,2, 0>, &lt;4,2,0>],
+	 [&lt;0,3,0>, &lt;1,3, 0>, &lt;2,3, 5,0.5>, &lt;3,3, 0>, &lt;4,3,0>],
+	 [&lt;0,4,0>, &lt;1,4, 0>, &lt;2,4, 0>,     &lt;3,4, 0>, &lt;4,4,0>],
+	 [&lt;0,5,0>, &lt;1,5,-3>, &lt;2,5, 3>,     &lt;3,5,-3>, &lt;4,5,0>]]
+     translate &lt;-2, -2.5, 0>
+     rotate &lt;-90, -30, 0>
+     uv_steps 32, 32
+     shiny_red
+   }
+</pre>
+<p>
+The preceeding patch was both non-uniform and rational.  If you don't
+want to bother declaring the knot vector you can simply omit it.  This
+will result in a open uniform B-Spline patch.  Most of the time the
+non-uniform knot vectors are unnecessary and can be safely omitted.
+The preceeding declaration with uniform knot vectors, and non-rational
+vertices could then be declared as:
+
+<pre>
+   object {
+     nurb 4, 6, 4, 5,
+      [[&lt; 0, 0, 0>, &lt; 1, 0, 3>, &lt; 2, 0,-3>, &lt; 3, 0, 3>, &lt; 4, 0, 0>],
+       [&lt; 0, 1, 0>, &lt; 1, 1, 0>, &lt; 2, 1, 0>, &lt; 3, 1, 0>, &lt; 4, 1, 0>],
+       [&lt; 0, 2, 0>, &lt; 1, 2, 0>, &lt; 2, 2, 5>, &lt; 3, 2, 0>, &lt; 4, 2, 0>],
+       [&lt; 0, 3, 0>, &lt; 1, 3, 0>, &lt; 2, 3, 5>, &lt; 3, 3, 0>, &lt; 4, 3, 0>],
+       [&lt; 0, 4, 0>, &lt; 1, 4, 0>, &lt; 2, 4, 0>, &lt; 3, 4, 0>, &lt; 4, 4, 0>],
+       [&lt; 0, 5, 0>, &lt; 1, 5,-3>, &lt; 2, 5, 3>, &lt; 3, 5,-3>, &lt; 4, 5, 0>]]
+     translate &lt;-2, -2.5, 0>
+     rotate &lt;-90, -30, 0>
+     uv_steps 32, 32
+     shiny_red
+   }
+</pre>
+<p>
+Note that internally NURBS are stored as triangles.  This can result
+in a high memory usage for a finely diced NURB (uv_steps large).<p>
+
+
+<h4><a name=2.3.2.12>Parabola</a></h4>
+<p>
+A parabola is defined in terms of a bottom point, a top point, and its
+radius at the top.<p>
+
+The format of the declaration is:
+
+<pre>
+   parabola &lt;x0, y0, z0>, &lt;x1, y1, z1>, r
+</pre>
+<p>
+The vector &lt;x0,y0,z0> defines the top of the parabola - the part that
+comes to a point.  The vector &lt;x1,y1,z1> defines the bottom of the
+parabola, the width of the parabola at this point is r.<p>
+
+An example of a parabola declaration is:
+
+<pre>
+   object {
+     parabola &lt;0, 6, 0>, &lt;0, 0, 0>, 3
+     translate &lt;16, 0, 16>
+     steel_blue
+   }
+</pre>
+<p>
+This is sort of like a salt shaker shape with a rounded top and the
+base on the x-z plane.
+
+
+<h4><a name=2.3.2.13>Parametric surface</a></h4>
+<p>
+A parametric surface allows the creation of surfaces as a mesh of
+triangles.  By defining the vertices of the mesh in terms of functions
+of u and v, Polyray will automatically create the entire surface.  The
+smoothness of the surface is determined by the number of steps allowed
+for u and v.<p>
+
+The mesh defaults to 0 &lt;= u &lt;= 1, and 0 &lt;= v &lt;= 1.  By explicitly
+defining the uv_bounds for the surface it is possible to create only
+the desired parts of the surface.<p>
+
+The format of the declaration is:
+
+<pre>
+   parametric &lt;fx(u,v), fy(u,v), fz(u,v)>
+</pre>
+<p>
+For example, the following declarations could be used to create a
+torus:
+
+<pre>
+   define r0 1.25
+   define r1 0.5
+
+   define torux (r0 + r1 * cos(v)) * cos(u)
+   define toruy (r0 + r1 * cos(v)) * sin(u)
+   define toruz r1 * sin(v)
+
+   object {
+     parametric &lt;torux,toruy,toruz>
+     rotate &lt;-20, 0, 0>
+     shiny_red
+     uv_bounds 0, 2*pi, 0, 2*pi
+     uv_steps 16, 8
+   }
+</pre>
+
+<h4><a name=2.3.2.14>Polygon</a></h4>
+<p>
+Although polygons are not very interesting mathematically, there are
+many sorts of objects that are much easier to represent with polygons.
+Polyray assumes that all polygons are closed and automatically adds a
+side from the last vertex to the first vertex.<p>
+
+The format of the declaration is:
+
+<pre>
+    polygon total_vertices,
+       &lt;vert1.x,vert1.y,vert1.z>
+       [, &lt;vert2.x, vert2.y, vert2.z>]
+       [, etc. for total_vertices vertices]
+</pre>
+<p>
+As with the sphere, note the comma separating each vertex of the
+polygon.<p>
+
+I use polygons as a floor in a lot of images.  They are a little
+slower than the corresponding plane, but for scan conversion they are
+a lot easier to handle.  An example of a checkered floor made from a
+polygon is:
+
+<pre>
+   object {
+      polygon 4, &lt;-20,0,-20>, &lt;-20,0,20>, &lt;20,0,20>, &lt;20,0,-20>
+      texture {
+         checker matte_white, matte_black
+         translate &lt;0, -0.1, 0>
+         scale &lt;2, 1, 2>
+       }
+    }
+</pre>
+
+
+<h4><a name=2.3.2.15>Polynomial surface</a></h4>
+<p>
+The format of the declaration is:
+
+<pre>
+   polynomial f(x,y,z)
+</pre>
+
+The function f(x,y,z) must be a simple polynomial, i.e. x^2+y^2+z^2-
+1.0 is the definition of a sphere of radius 1 centered at (0,0,0).<p>
+
+For quartic (4th order) equations, there are three ways that Polyray
+can use to solve for roots.  By specifying which one is desired, it is
+possible to tune for quality or speed.  The method of Ferrari is the
+fastest, but also the most numerically unstable.  By default the
+method of Vieta is used.  Sturm sequences (which are the slowest)
+should be used where the highest quality is desired.<p>
+
+The declaration of which root solver to use takes one of the forms:
+
+<pre>
+   root_solver Ferrari
+   root_solver Vieta
+   root_solver Sturm
+</pre>
+<p>
+(Capitalization is important - these are proper nouns after all.)<p>
+
+Note: due to unavoidable numerical inaccuracies, not all polynomial
+surfaces will render correctly from all directions.<p>
+
+The following example, taken from devil.pi defines a quartic
+polynomial.  The use of the CSG clipping object is to trim
+uninteresting parts of the surface.  The bounding box declaration
+helps the scan conversion routines figure out where to look for the
+surface.
+
+<pre>
+   // Variant of a devil's curve in 3-space.  This figure has a top
+   // and bottom part that are very similar to a hyperboloid of one
+   // sheet, however the central region is pinched in the middle
+   // leaving two teardrop shaped holes.
+   object {
+     object { polynomial x^4 + 2*x^2*z^2 - 0.36*x^2 - y^4 +
+                         0.25*y^2 + z^4
+              root_solver Ferrari }
+     &amp; object { box &lt;-2, -2, -0.5>, &lt;2, 2, 0.5> }
+     bounding_box &lt;-2, -2, -0.5>, &lt;2, 2, 0.5>
+     rotate &lt;10, 20, 0>
+     translate &lt;0, 3, -10>
+     shiny_red
+   }
+</pre>
+<p>
+Note: as the order of the polynomial goes up, the numerical accuracy
+required to render the surface correctly also goes up.  One problem
+that starts to rear its ugly head starting at around 3rd to 4th order
+equations is a problem with determining shadows correctly.  The result
+is black spots on the surface.  You can ease this problem to a certain
+extent by making the value of shadow_tolerance larger.  For 4th and
+higher equations, you will want to use a value of at least 0.05,
+rather than the default 0.001.<p>
+
+<h4><a name=2.3.2.16>Spheres</a></h4>
+<p>
+Spheres are the simplest 3D object to render and a sphere primitive
+enjoys a speed advantage over most other primitives.<p>
+
+The format of the declaration is:
+
+<pre>
+    sphere &lt;center.x, center.y, center.z>, radius
+</pre>
+<p>
+Note the comma after the center vector, it really is necessary.<p>
+
+My basic benchmark file is a single sphere, illuminated by a single
+light.  The definition of the sphere is:
+
+<pre>
+   object {
+     sphere &lt;0, 0, 0>, 2
+     shiny_red
+   }
+</pre>
+
+
+<h4><a name=2.3.2.17>Sweep surface</a></h4>
+<p>
+A sweep surface, also referred to as an extruded surface, is a polygon
+that has been swept along a given direction.  It can be used to make
+multi-sided beams, or to create ribbon-like objects.<p>
+
+The format of the declaration is:
+
+<pre>
+    sweep type, direction, total_vertices,
+       &lt;vert1.x,vert1.y,vert1.z>
+       [, &lt;vert2.x, vert2.y, vert2.z>]
+       [, etc. for total_vertices vertices]
+</pre>
+<p>
+The value of type is either 1, or 2.  If the value is 1, then the
+surface will be a set of connected squares.  If the value is 2, then
+the surface will be represented by a spline that approximates the line
+segments that were given.<p>
+
+The value of the vector direction is used to change the orientation of
+the sweep.  For a sweep surface that is extruded straight up and down
+the y-axis, use &lt;0, 1, 0> for direction.  The size of the vector
+direction will also affect the amount of extrusion (e.g., if
+|direction| = 2, then the extrusion will be two units in that
+direction).<p>
+
+An example of a sweep surface is:
+
+<pre>
+   // Sweep made from connected quadratic splines.
+   object {
+     sweep 2, &lt;0, 2, 0>, 16,
+        &lt;0, 0>, &lt;0, 1>, &lt;-1, 1>, &lt;-1, -1>, &lt;2, -1>, &lt;2, 3>,
+        &lt;-4, 3>, &lt;-4, -4>, &lt;4, -4>, &lt;4, -11>, &lt;-2, -11>,
+        &lt;-2, -7>, &lt;2, -7>, &lt;2, -9>, &lt;0, -9>, &lt;0, -8>
+     translate &lt;0, 0, -4>
+     scale &lt;1, 0.5, 1>
+     rotate &lt;0,-45, 0>
+     translate &lt;10, 0, -18>
+     shiny_yellow
+   }
+</pre>
+
+<p>
+Note: CSG will really only work correctly if you close the sweep -
+that is make the end point of the sweep the same as the start point.
+Sweeps, unlike polygons are not automatically closed by Polyray.<p>
+
+See the description of glyphs for a more general swept surface.
+
+
+<h4><a name=2.3.2.18>Torus</a></h4>
+<p>
+The torus primitive is a doughnut shaped surface that is defined by a
+center point, the distance from the center point to the middle of the
+ring of the doughnut, the radius of the ring of the doughnut, and the
+orientation of the surface.<p>
+
+The format of the declaration is:
+
+<pre>
+    torus r0, r1, &lt;center.x, center.y, center.z>,
+                  &lt;dir.x, dir.y, dir.z>
+</pre>
+<p>
+As an example, a torus that has major radius 1, minor radius 0.4, and
+is oriented so that the ring lies in the x-z plane would be declared
+as:
+
+<pre>
+   object {
+     torus 1, 0.4, &lt;0, 0, 0>, &lt;0, 1, 0>
+     shiny_red
+   }
+</pre>
+<p>
+Note: since a torus is a 4th order polynomial, it is possible to
+specify which quartic root solver to use.  
+<p>
+
+<h4><a name=2.3.2.19>Triangular patches</a></h4>
+<p>
+A triangular patch is defined by a set of vertices and their normals.
+When calculating shading information for a triangular patch, the
+normal information is used to interpolate the final normal from the
+intersection point to produce a smooth shaded triangle.<p>
+
+The format of the declaration is:
+
+<pre>
+    patch &lt;x0,y0,z0>, &lt;nx0,ny0,nz0>,  [UV u0, v0,]
+          &lt;x1,y1,z1>, &lt;nx1,ny1,nz1>,  [UV u1, v1,]
+          &lt;x2,y2,z2>, &lt;nx2,ny2,nz2> [, UV u2, v2]
+</pre>
+<p>
+The vertices and normals are required for each of the three corners of
+the patch.  The u/v coordinates are optional.  If they are omitted,
+then they will be set to the following values:
+
+<pre>
+   u0 = 0, v0 = 0
+   u1 = 1, v1 = 0
+   u2 = 0, v1 = 1
+</pre>
+<p>
+Smooth patch data is usually generated as the output of another
+program.
+
+<h3><a name=2.3.3>Constructive Solid Geometry (CSG)</a></h3>
+<p>
+Objects can be defined in terms of the union, intersection, and
+inverse of other objects.  The operations and the symbols used are:
+
+<pre>
+   csgexper + csgexper  - Union
+   csgexper * csgexper  - Intersection
+   csgexper - csgexper  - Difference
+   csgexper &amp; csgexper  - Clip the first object by the second
+   ~csgexper            - Inverse
+   (csgexper)           - Parenthesised expression
+</pre>
+<p>
+Note that intersection and difference require a clear inside and
+outside.  Not all primitives have well defined sides.  Those that do
+are:
+
+<blockquote>
+   Spheres, Boxes, Glyphs, Polynomials, Blobs, Tori, and Functions.
+</blockquote>
+<p>
+Other surfaces that do not always have a clear inside/outside, but
+work reasonably well in CSG intersections are:
+
+<blockquote>
+   Cylinders, Cones, Discs, Height Fields, Lathes, Parabola, Polygons,
+   and Sweeps.
+</blockquote>
+<p>
+Using Cylinders, Cones, and Parabolas works correctly, but the open
+ends of these surfaces will also be open in the resulting CSG.  To
+close them off you can use a disc shape.<p>
+
+Using Discs, and Polygons in a CSG is really the same as doing a CSG
+with the plane that they lie in.  If fact, a large disc is an
+excellent choice for clipping or intersecting an object, as the
+inside/outside test is very fast.<p>
+
+Lathes, and Sweeps use Jordan's rule to determine if a point is
+inside.  This means that given a test point, if a line from that point
+to infinity crosses the surface an odd number of times, then the point
+is inside.  The net result is that if the lathe (or sweep) is not
+closed, then you may get odd results in a CSG intersection (or
+difference).<p>
+
+CSG involving height fields only works within the bounds of the field.<p>
+
+As an example, the following object is a sphere of radius 1 with a
+hole of radius 0.5 through the middle:
+
+<pre>
+   define cylinder_z object { cylinder &lt;0,0,-1.1>, &lt;0,0,1.1>, 0.5 }
+   define unit_sphere object { sphere &lt;0, 0, 0>, 1 }
+
+   // Define a CSG shape by deleting a cylinder from a sphere
+   object {
+     unit_sphere - cylinder_z
+     shiny_red
+   }
+</pre>
+
+
+<h3><a name=2.3.4>Gridded objects</a></h3>
+<p>
+A gridded object is a way to compactly represent a rectangular
+arrangement of objects by using an image map.  Each object is placed
+within a 1x1 cube that has its lower left corner at the location &lt;i,
+0, j> and its upper right corner at &lt;i+1, 1, j+1>.  The color index of
+each pixel in the image map is used to determine which of a set of
+objects will be placed at the corresponding position in space.<p>
+
+The gridded object is much faster to render than the corresponding
+layout of objects.  The major drawback is that every object must be
+scaled and translated to completely fit into a 1x1x1 cube that has
+corners at &lt;0,0,0> and &lt;1,1,1>.<p>
+
+The size of the entire grid is determined by the number of pixels in
+the image.  A 16x32 image would go from 0 to 16 along the x-axis and
+the last row would range from 0 to 16 at 31 units in z out from the x-
+axis.<p>
+
+The format of the declaration is:
+
+<pre>
+   gridded "image.tga",
+      object1
+      object2
+      object3
+      ...
+</pre>
+<p>
+An example of how a gridded object is declared is:
+
+<pre>
+   define tiny_sphere object { sphere &lt;0.5, 0.4, 0.5>, 0.4 }
+   define pointy_cone object { cone &lt;0.5, 0.5, 0.5>, 0.4,
+                                    &lt;0.5, 1, 0.5>, 0 }
+
+   object {
+      gridded "grdimg0.tga",
+         tiny_sphere { shiny_coral }
+         tiny_sphere { shiny_red }
+         pointy_cone { shiny_green }
+      translate &lt;-10, 0, -10>
+      rotate &lt;0, 210, 0>
+   }
+</pre>
+<p>
+In the image grdimg0.tga, there are a total of 3 colors used, every
+pixel that uses color index 0 will generate a shiny coral colored
+sphere, every pixel that uses index  will generate a red sphere, every
+pixel that uses index 2 will generate a green cone, and every other
+color index used in the image will leave the corresponding space
+empty.<p>
+
+The normal image format for a gridded object is either grayscale or
+color mapped.  To determine which object will be used, the value of
+the pixel itself in the grayscale image and the color index is used in
+the mapped image.  If a 16 bit Targa is used, then the second byte of
+the color is used.  If a 24 bit Targa is used, then the value of the
+red component is used.  This limits the # of objects for all images to
+256.<p>
+
+A color JPEG is treated the same as a 24 bit Targa (unlikely to be
+useful, due to the lossy nature of JPEG).<p>
+
+
+<h3><a name=2.3.5>Particle Systems</a></h3>
+<p>
+There are two distinct pieces of information that are used by Polyray
+to do particles.  The first is a particle declaration, this is the
+particle generator. The second is the particle itself.  It is
+important to retain the distinction, you generally only want to have
+one particle generator, but you may want that generator to produce
+many particles.<p>
+
+The form of the declaration for a particle generator is:
+
+<pre>
+   particle {
+     object "name"
+     position vector
+     velocity vector
+     acceleration vector
+     birth float
+     death float
+     count float
+     avoid float
+   }
+</pre>
+<p>
+The wrapper for the particle must be the name of an object appearing
+in a define statement.  If there isn't an object with that name,
+Polyray will write an error message and abort.  Everything else is
+optional, but if you don't set either the velocity or acceleration
+then the object will just sit at the origin.<p>
+
+The default values for each component are:<p>
+
+<center><table width=60% border cellspacing=1 cellpadding=3>
+<caption align=bottom>Defaults for <i>particle</i> declaration</caption>
+<tr><th>Component<th>Default
+<tr><td>position<br> velocity<br> acceleration<br> birth<br> death<br> count<br>
+avoid
+<td> &lt;0, 0, 0><br> &lt;0, 0, 0><br> &lt;0, 0, 0><br>
+frame == start_frame<br> false (never dies)<br> - 1<br> false (doesn't bounce)
+</table></center><p>
+
+As an example, the following declaration makes a starburst of 50
+spheres.  Note the conditional before the particle declaration.  You
+almost always want to do this, otherwise you will create a new
+particle generator at every frame of the animation. Since the default
+birth condition is to generate particles only on the first frame, the
+only side effect here would be to suck up more memory every frame to
+retain the particle generator definition.
+
+<pre>
+   frame_time 0.05
+
+   define gravity -1
+
+   // Star burst
+   if (frame == start_frame)
+   particle {
+     position &lt;0, 5, 0>
+     velocity brownian(&lt;0, 0, 0>, &lt;1, 1, 1>)
+     acceleration gravity
+     object "bsphere"
+     count 50
+   }
+</pre>
+<p>
+The value in the velocity declaration generates a random vector that
+ranges from &lt;-1, -1, -1> to &lt;1, 1, 1>.  Each particle of the 50 is
+given a different initial velocity, which is what gives the bursting
+effect.<p>
+
+An additional declaration, frame_time xx, has been added specifically
+for tuning particle animations.  This declaration determines how much
+time passes for every frame.  Each particle starts with an age of 0,
+after each frame it's age is incremented by the value xx in the
+frame_time declaration.  Additionally the position and velocity of the
+particle is updated after every frame according to the formula:
+
+<pre>
+   V = V + frame_time * A
+   P = P + frame_time * V
+</pre>
+<p>
+The status of a particle is set by making use of some of the standard
+Polyray variables.  The names and meanings are:<p>
+
+<center><table border cellspacing=1 cellpadding=3>
+<tr><th>Variable<th>Meaning
+<tr><td align=center>P<br>x<br>y<br>z<br>I<br>u
+<td>Current location of the particle as a vector<br>
+X location of the particle (or P[0])<br>
+Y location of the particle (or P[1])<br>
+Z location of the particle (or P[2])<br>
+Current velocity of the particle as a vector<br>
+Age of the particle (frame_time * elapsed frames since birth)
+</table></center><p>
+
+These values are used in two situations, when checking the death
+condition of a particle and when calculating the acceleration of the
+particle.<p>
+
+If an avoid statement is given then before every frame the position of
+the particle is checked to see if it hits any objects in the scene
+(non-particle objects).  If so, then the particle will bounce off the
+object.<p>
+
+<h2><a name=2.4>Color and lighting</a></h2>
+<p>
+The color space used in polyray is RGB, with values of each component
+specified as a value from 0 -> 1.  The way the color and shading of
+surfaces is specified is described in the following sections.<p>
+
+RGB colors are defined as either a three component vector, such as
+&lt;0.6, 0.196078, 0.8>, or as one of the X11R3 named colors (which for
+the value given is DarkOrchid).  One of these days when I feel like
+typing and not thinking (or if I find them on line), I'll put in the
+X11R4 colors.<p>
+
+The coloring of objects is determined by the interaction of lights,
+the shape of the surface it is striking, and the characteristics of
+the surface itself.<p>
+
+
+<h3><a name=2.4.1>Light sources</a></h3>
+<p>
+Light sources are one of: simple positional light sources, spot
+lights, or textured lights.  None of these lights have any physical
+size.  The lights do not appear in the scene, only the effects of the
+lights.
+
+<h4><a name=2.4.1.1>Positional Lights</a></h4>
+<p>
+A positional light is defined by its RGB color and its XYZ position.<p>
+
+The formats of the declaration are:
+
+<pre>
+    light color, location
+    light location
+</pre>
+<p>
+The second declaration will use white as the color.
+
+<h4><a name=2.4.1.2>Spot Lights</a></h4>
+<p>
+The formats of the declaration are:
+
+<pre>
+    spot_light color, location, pointed_at, Tightness, Angle, Falloff
+    spot_light location, pointed_at
+</pre>
+<p>
+The vector location defines the position of the spot light, the vector
+pointed_at defines the point at which the spot light is directed.  The
+optional components are:<p>
+
+<center><table border cellspacing=1 cellpadding=3>
+<caption align=bottom>Optional components for <i>spot_light</i> declaration
+</caption>
+<tr><th>Name<th>Description
+<tr><td>color<td>The color of the spotlight
+<tr><td>Tightness<td>The power function used to determine the shape of
+                  the hot spot
+<tr><td>Angle<td>The angle (in degrees) of the full effect of the
+                  spot light
+<tr><td>Falloff<td>A larger angle at which the amount of light falls
+                  to nothing
+</table></center><p>
+
+A sample declaration is:
+<pre>
+   spot_light white, &lt;10,10,0>, &lt;3,0,0>, 3, 5, 20
+</pre>
+
+
+<h4><a name=2.4.1.3>Directional lights</a></h4>
+<p>
+The directional light means just that - light coming from some
+direction.
+
+<pre>
+   directional_light color, direction
+   directional_light direction
+</pre>
+<p>
+An example would be:
+
+<pre>
+  directional_light &lt;2, 3, -4>
+</pre>
+<p>
+giving a white light coming from the right, above, and behind the origin.
+
+
+<h4><a name=2.4.1.4>Textured lights</a></h4>
+<p>
+Textured lights are an enhancement of point lights that add: a
+function (including image maps) to describe the intensity &amp; color of
+the light in each direction, transformations, and size.  The format of
+the declaration is:
+
+<pre>
+   textured_light {
+     color float
+     [sphere center, radius]
+     [translate/rotate/scale]
+   }
+</pre>
+<p>
+Any color expression is allowed for the textured light, and is
+evaluated at run time.<p>
+
+A rotating slide projector light from the data file ilight.pi is shown
+below:
+
+<pre>
+   define block_environ
+   environment("one.tga", "two.tga", "three.tga",
+               "four.tga", "five.tga", "six.tga")
+   textured_light {
+     color environment_map(P, block_environ)
+     rotate &lt;frame*6, frame*3, 0>
+     translate &lt;0, 2, 0>
+   }
+</pre>
+
+
+<h5><a name=2.4.1.4.1>Area Lights</a></h5>
+<p>
+By adding a sphere declaration to a textured_light, it is turned into
+an area light.  The current implementation is a bit rough for long and
+narrow shadows, but in general gives very good results.  A typical
+declaration of an area light is:
+
+<pre>
+   textured_light {
+      color white
+      sphere &lt;8, 10, 0>, 1
+   }
+</pre>
+
+
+<h4><a name=2.4.1.5>Depth Mapped Lights</a></h4>
+<p>
+Depth mapped lights are very similar to spotlights, in the sense that
+they point from one location and at another location.  The primary use
+for this light type is for doing shadowing in scan converted scenes.
+The format of their declaration is:
+
+<pre>
+   depthmapped_light {
+      [ angle float ]
+      [ aspect float ]
+      [ at vector ]
+      [ color expression ]
+      [ depth "depthfile.tga" ]
+      [ from vector ]
+      [ hither float ]
+      [ up vector ]
+   }
+</pre>
+<p>
+You may notice that the format of the declaration is very similar to
+the viewpoint declaration.  This is intentional, as you will usually
+generate the depth information for depthfile.tga as the output of a
+run of Polyray. To support output of depth information, a new
+statements was added to the viewpoint declaration, image_format.<p>
+
+A viewpoint declaration that will output a depth file would have the
+form:
+
+<pre>
+   viewpoint {
+     from [ location of depth mapped light ]
+     at   [ location the light is pointed at ]
+
+     image_format 1
+   }
+</pre>
+<p>
+Where the final statement tells Polyray to output depth information
+instead of color information.  Note that if the value in the
+image_format statement is 0, then normal rendering will occur.<p>
+
+If a hither declaration is used, then the value given is used as a
+bias to help prevent self shadowing.  The default value for this bias
+is the value of shadow_tolerance in <b>polyray.ini</b>.<p>
+
+
+<h3><a name=2.4.2>Background color</a></h3>
+<p>
+The background color is the one used if the current ray does not
+strike any objects.  The color can be any vector expression, although
+is usually a simple RGB color value.
+
+The format of the declaration is:
+
+<pre>
+    background &lt;R,G,B></pre>
+ or<pre>
+    background color</pre>
+<p>
+If no background color is set black will be used.<p>
+
+An interesting trick that can be performed with the background is to
+use an image map as the background color (it is also a way to
+translate from one Targa format to another).  The way this can be done
+is:
+
+<pre>
+  background planar_imagemap(image("test1.tga", P)
+</pre>
+<p>
+The background also affects the opacity channel in 16 and 32 bit Targa
+output images.  If any background contributes directly to the pixel
+(not as a result of reflection or refraction), then the attribute bit
+is cleared in a 16 bit color and the attribute byte is set to the
+percentage of the pixel that was covered by the background in a 32 bit
+color.<p>
+
+In order to extend the flexibility of the background, the meanings of
+various runtime variables are set uniquely.<p>
+
+<center><table border cellspacing=1 cellpadding=3>
+<caption align=bottom>Global variables</caption>
+<tr><th>Variable<th>Description
+<tr><td align=center>
+u,x<br> v,z<br> W<br> P<br> N<br> I<br> U<br> w
+<td> How far across the output image (from 0 at left to 1 at right)<br>
+How far down the output image (from 0 at bottom to 1 at top)<br>
+&lt;0,0,0><br> Same as &lt;x, 0, z><br> Direction of the current ray<br>
+&lt;0,0,0><br> Same as &lt;u, v, w><br>
+Level of recursion (0 for eye rays, higher for reflected and refracted rays)
+</table></center><p>
+
+As an example, suppose you wanted to have an image appear in the
+background, but you didn't want to have the image appear in any
+reflections.  Then you could define the background with the following
+expression:
+
+<pre>
+   background (w == 0 ? planar_imagemap(img1, P) : black)
+</pre>
+
+<p>
+If you wanted to have one image in the background, and another that
+appears in reflections (or refracted rays), then you could use the
+following expression:
+
+<pre>
+   background (w == 0 ? planar_imagemap(img1, P)
+                      : spherical_imagemap(img2, N))
+</pre>
+<p>
+The previous background expression fits img1 exactly into the output
+image and maps img2 completely around the entire scene.  This might be
+useful if you have a map of stars that you want to appear in
+reflections, but still want to have an image as the background.
+
+
+<h4><a name=2.4.2.1>Global Haze (fog)</a></h4>
+<p>
+The global haze is a color that is added based on how far the ray
+traveled before hitting the surface.  The format of the expression is:
+
+<pre>
+   haze coeff, starting_distance, color
+</pre>
+<p>
+The color you use should almost always be the same as the background
+color. The only time it would be different is if you are trying to put
+haze into a valley, with a clear sky above (this is a tough trick, but
+looks nice).  A  example would be:
+
+<pre>
+   haze 0.8, 3, midnight_blue
+</pre>
+<p>
+The value of the coeff ranges from 0 to 1, with values closer to 0
+causing the haze to thicken, and values closer to 1 causing the haze
+to thin out.  I know it seems backwards, but it is working and I don't
+want to break anything.
+
+
+<h3><a name=2.4.3>Textures</a></h3>
+<p>
+Polyray supports a few simple procedural textures: a standard shading
+model, a checker texture, a hexagon texture, and a general purpose (3D
+noise based) texture.  In addition, a very flexible (although slower)
+functional texture is supported.  Individual textures can be combined
+in various ways to create new ones.  Texture types that help to
+combine other textures include: layered textures, indexed textures,
+and summed textures. 
+<p>
+
+The general syntax of a texture is:
+<pre>
+   texture { [texture declaration] }</pre>
+or<pre>
+   texture_sym</pre>
+<p>
+Where texture_sym is a previously defined texture declaration.
+
+
+<h4><a name=2.4.3.1>Procedural Textures</a></h4>
+<p>
+Procedural textures (i.e. checker, matte_white, shiny_red, ...) are
+ones that are completely defined at the time the data file is read.
+<p>
+
+<h5><a name=2.4.3.1.1>Standard Shading Model</a></h5>
+<p>
+Unlike many other ray-tracers, surfaces in Polyray not have a single
+color that is used for all of the components of the shading model.
+Instead a number of characteristics of the surface must be defined
+(with a matte white being the default).<p>
+
+A surface declaration has the form:
+
+<pre>
+     surface {
+        [ surface definitions ]
+     }
+</pre>
+<p>
+For example, the following declaration is a red surface with a white
+highlight, corresponding to the often seen plastic texture:
+
+<pre>
+   define shiny_red
+   texture {
+     surface {
+       ambient red, 0.2
+       diffuse red, 0.6
+       specular white, 0.8
+       microfacet Reitz 10
+     }
+   }
+</pre>
+
+The allowed surface characteristics that can be defined are:<p>
+
+<center><table border cellspacing=1 cellpadding=3>
+<tr><th>Parameter<th>Description
+<tr><td>
+color<br>
+ambient<br>
+diffuse<br>
+specular<br>
+reflection<br>
+transmission<br>
+microfacet
+<td>
+Color if not given in another component<br>
+Light given off by the surface<br>
+Light reflected in all directions<br>
+Amount and color of specular highlights<br>
+Reflectivity of the surface<br>
+Amount and color of refracted light<br>
+Specular lighting model (see below)
+</table></center><p>
+
+The lighting equation used is (in somewhat simplified terms):
+
+<pre>
+   L = ambient + diffuse + specular + reflected + transmitted</pre>
+or<pre>
+   L = Ka + Kd * (l1 + l2 + ...) + Ks * (l1 + l2 + ...) + Kr + Kt</pre>
+<p>
+
+Where l1, l2, ... are the lights, Ka is the ambient term, Kd is the
+diffuse term, Ks is the specular term, Kr is the reflective term, and
+Kt it the transmitted (refractive) term. Each of these terms has a
+scale value and a filter value (the filter defaults to white/clear if
+unspecified).<p>
+
+See the file colors.inc for a number of declarations of surface
+characteristics, including: mirror, glass, shiny, and matte.<p>
+
+For lots of detail on lighting models, and the theory behind how color
+is used in computer generated images, run (don't walk) down to your
+local computer bookstore and get:
+
+<blockquote>
+Illumination and Color in Computer Generated Imagery
+Roy Hall, 1989
+Springer Verlag
+</blockquote>
+
+<p>
+Source code in the back of that book was the inspiration for the
+microfacet distribution models implemented for Polyray.<p>
+
+Note that you don't really have to specify all of the color components
+if you don't want to.  If the color of a particular part of the
+surface declaration is not defined, then the value of the color
+component will be examined to see if it was declared.  If so, then
+that color will be used as the filter.  As an example, the declaration
+above could also be written as:
+
+<pre>
+   define shiny_red
+   texture {
+     surface {
+       color red
+       ambient 0.2
+       diffuse 0.6
+       specular white, 0.8
+       microfacet Reitz 10
+     }
+   }
+</pre>
+
+<h6><a name=2.4.3.1.1.1>Ambient light</a></h6>
+<p>
+Ambient lighting is the light given off by the surface itself.  This
+will be a constant amount, independent of any lights that may be in
+the scene.<p>
+
+The format of the declaration is:
+
+<pre>
+    ambient color, scale
+    ambient scale
+</pre>
+<p>
+As always, color indicates either an RGB triple like &lt;1.0,0.7,0.9>, or
+a named color.  scale gives the amount of contribution that ambient
+gives to the overall amount light coming from the pixel.  The scale
+values should lie in the range 0.0 -> 1.0
+
+
+<h6><a name=2.4.3.1.1.2>Diffuse light</a></h6>
+<p>
+Diffuse lighting is the light given off by the surface under
+stimulation by a light source.  The intensity of the diffuse light is
+directly proportional to the angle of the surface with respect to the
+light.<p>
+
+The format of the declaration is:
+
+<pre>
+    diffuse color, scale
+    diffuse scale
+</pre>
+<p>
+The only information used for diffuse calculations is the angle of
+incidence of the light on the surface.
+
+
+<h6><a name=2.4.3.1.1.3>Specular highlights</a></h6>
+<p>
+The format of the declaration is:
+
+<pre>
+   specular color, scale
+   specular scale
+</pre>
+
+The means of calculating specular highlights is by default the Phong
+model.  Other models are selected through the Microfacet distribution
+declaration.
+
+
+<h6><a name=2.4.3.1.1.4>Reflected light</a></h6>
+<p>
+Reflected light is the color of whatever lies in the reflected
+direction as calculated by the relationship of the view angle and the
+normal to the surface.<p>
+
+The format of the declaration is:
+
+<pre>
+   reflection scale
+   reflection color, scale
+</pre>
+<p>
+Typically, only the scale factor is included in the reflection
+declaration, this corresponds to all colors being reflected with
+intensity proportional to the scale.  A color filter is allowed in the
+reflection definition, and this allows the modification of the color
+being reflected (I'm not sure if this is useful, but I included it
+anyway).
+
+
+<h6><a name=2.4.3.1.1.5>Transmitted light</a></h6>
+<p>
+Transmitted light is the color of whatever lies in the refracted
+direction as calculated by the relationship of the view angle, the
+normal to the surface, and the index of refraction of the material.<p>
+
+The format of the declaration is:
+
+<pre>
+   transmit scale, ior
+   transmit color, scale, ior
+</pre>
+<p>
+Typically, only the scale factor is included in the transmitted
+declaration, this corresponds to all colors being transmitted with
+intensity proportional to the scale.  A color filter is allowed in the
+transmitted definition, and this allows the modification of the color
+being transmitted by making the transmission filter different from the
+color of the surface itself.<p>
+
+It is possible to have surfaces with colors very different than the
+one closest to the eye become apparent.  (See gsphere.pi for an
+example, a red sphere is in the foreground, a green sphere and a blue
+sphere behind.  The specular highlights of the red sphere go to
+yellow, and blue light is transmitted through the red sphere.)<p>
+
+A more complex file is lens.pi in which two convex lenses are lined up
+in front of the viewer.  The magnified view of part of a grid of
+colored balls is very apparent in the front lens.<p>
+
+
+<h6><a name=2.4.3.1.1.6>Microfacet distribution</a></h6>
+<p>
+The microfacet distribution is a function that determines how the
+specular highlighting is calculated for an object.<p>
+
+The format of the declaration is:
+
+<pre>
+   microfacet Distribution_name falloff_angle
+   microfacet falloff_angle
+</pre>
+<p>
+The distribution name is one of: Blinn, Cook, Gaussian, Phong, Reitz.
+The falloff angle is the angle at which the specular highlight falls
+to 50% of its maximum intensity.  (The smaller the falloff angle, the
+sharper the highlight.)  If a microfacet name is not given, then the
+Phong model is used.<p>
+
+The falloff angle must be specified in degrees, with values in the
+range 0 to 45.  The falloff angle corresponds to the roughness of the
+surface, the smaller the angle, the smoother the surface.<p>
+
+Note: as stated before, look at the book by Hall.  I have found
+falloff values of 5-10 degrees to give nice tight highlights.  Using
+falloff angle may seem a bit backwards from other raytracers, which
+typically use the power of a cosine function to define highlight size.
+When using a power value, the higher the power, the smaller the
+highlight.  Using angles seems a little tidier since the smaller the
+angle, the smaller the highlight.<p>
+
+<h5><a name=2.4.3.1.2>Checker</a></h5>
+<p>
+the checker texture has the form:
+
+<pre>
+   texture {
+     checker texture1, texture2
+   }
+</pre>
+<p>
+where texture1 and texture2 are texture declarations (or texture
+constants).<p>
+
+A standard sort of checkered plane can be defined with the following:
+
+<pre>
+   // Define a matte red surface
+   define matte_red
+   texture {
+     surface {
+       ambient red, 0.1
+       diffuse red, 0.5
+     }
+   }
+
+   // Define a matte blue surface
+   define matte_blue
+   texture {
+     surface {
+       ambient blue, 0.2
+       diffuse blue, 0.8
+     }
+   }
+
+   // Define a plane that has red and blue checkers
+   object {
+     disc &lt;0, 0.01, 0>, &lt;0, 1, 0>, 5000
+     texture {
+       checker matte_red, matte_blue
+     }
+   }
+</pre>
+
+
+<h5><a name=2.4.3.1.3>Hexagon</a></h5>
+<p>
+the hexagon texture is oriented in the x-z plane, and has the form:
+
+<pre>
+   texture {
+     hexagon texture1, texture2, texture3
+   }
+</pre>
+<p>
+This texture produces a honeycomb tiling of the three textures in the
+declaration.  Remember that this tiling is with respect to the x-z
+plane, if you want it on a vertical wall you will need to rotate the
+texture.
+
+<h5><a name=2.4.3.1.4>Noise surfaces</a></h5>
+<p>
+The complexity and speed of rendering of the noise surface type lies
+between the standard shading model and the special surfaces described
+below.  It is an attempt to capture a large number of the standard 3D
+texturing operations in a single declaration.<p>
+
+A noise surface declaration has the form:
+
+<pre>
+   texture {
+     noise surface {
+       [ noise surface definition ]
+     }
+   }
+</pre>
+
+The allowed surface characteristics that can be defined are:<p>
+
+<center><table border cellspacing=1 cellpadding=3>
+<caption align=bottom>Surface characteristics</caption>
+<tr><th>Parameter<th>Description
+<tr><td>color &lt;r, g, b>
+    <td>Basic surface color (used if the noise function generates a value not
+    contained in the color map)
+<tr><td>ambient scale
+    <td>Amount of ambient contribution
+<tr><td>diffuse scale
+    <td>Diffuse contribution
+<tr><td>specular color, scale
+    <td>Amount and color of specular highlights, if the color is not given
+    then the body color will be used.
+<tr><td>reflection
+    <td>Reflectivity of the surface
+<tr><td>transmission scale, ior
+    <td>Amount of refracted light
+<tr><td>microfacet kind angle
+    <td>Specular lighting model (see the description of a standard surface)
+<tr><td>color_map(map_entries)
+    <td>Define the color map (see following section on color map definitions
+    for further details)
+<tr><td>bump_scale float
+    <td>How much the bumps affect the normal
+<tr><td>frequency float
+    <td>Affects the wavelength of ripples and waves
+<tr><td>phase float
+    <td>Affects the phase of ripples and waves
+<tr><td>lookup_fn index
+    <td>Selects a predefined lookup function
+<tr><td>normal_fn index
+    <td>Selects a predefined normal modifier
+<tr><td>octaves float
+    <td>Number of octaves of noise to use
+<tr><td>position_fn index
+    <td>How the intersection point is used in the generation of a noise
+    texture
+<tr><td>position_scale float
+    <td>Amount of contribution of the position value to the overall texture
+<tr><td>turbulence float
+    <td>Amount of contribution of the noise to overall texture.
+</table></center><p>
+
+The way the final color of the texture is decided is by calculating a
+floating point value using the following general formula:
+
+<pre>
+   index = lookup_fn(position_scale * position_fn +
+                     turbulence * noise3d(P, octaves))
+</pre>
+
+The index value that is calculated is then used to lookup a color from
+the color map.  This final color is used for the ambient, diffuse,
+reflection and transmission filters.  The functions that are currently
+available, with their corresponding indices are:<p>
+
+<center><table border cellspacing=1 cellpadding=3>
+<caption align=bottom>Positional and lookup functions</caption>
+<tr><td><th>Index<th>Effect
+<tr><th>Positional functions<td align=center>1<br>2<br>3<br>4<br>5<br>default
+<td>
+x value in the object coordinate system<br>
+x value in the world coordinate system<br>
+Distance from the z axis<br>
+Distance from the origin<br>
+Angle from the x-axis (in the x-z plane, from 0 to 1)<br>
+0.0
+<tr><th>Lookup functions<td align=center>1<br>2<br>3<br>default
+<td>
+sawtooth function, result from 0 -> 1<br>
+sin function, result from 0->1<br>
+ramp function, result from 0->1<br>
+no modification made
+</table></center><p>
+
+Definitions of these function numbers that make sense are:
+
+<pre>
+  define position_plain       0
+  define position_objectx     1
+  define position_worldx      2
+  define position_cylindrical 3
+  define position_spherical   4
+  define position_radial      5
+
+  define lookup_plain    0
+  define lookup_sawtooth 1
+  define lookup_sin      2
+  define lookup_ramp     3
+</pre>
+<p>
+An example of a texture defined this way is a simple white marble:
+
+<pre>
+   define white_marble_texture
+   texture {
+     noise surface {
+       color white
+       position_fn position_objectx
+       lookup_fn lookup_sawtooth
+       octaves 3
+       turbulence 3
+       ambient 0.2
+       diffuse 0.8
+       specular 0.3
+       microfacet Reitz 5
+       color_map(
+         [0.0, 0.8, &lt;1, 1, 1>, &lt;0.6, 0.6, 0.6>]
+         [0.8, 1.0, &lt;0.6, 0.6, 0.6>, &lt;0.1, 0.1, 0.1>])
+     }
+   }
+</pre>
+<p>
+In addition to coloration, the bumpiness of the surface can be
+affected by selecting a function to modify the normal.  The currently
+supported normal modifier functions are:<p>
+
+<center><table border cellspacing=1 cellpadding=3>
+<tr><th>Index<th>Effect
+<tr><td align=center>1<br>2<br>3<br>default
+<td>
+Make random bumps in the surface<br>
+Add ripples to the surface<br>
+Give the surface a dented appearance<br>
+no change<br>
+</table></center><p>
+
+Definitions that make sense are:
+
+<pre>
+  define default_normal 0
+  define bump_normal    1
+  define ripple_normal  2
+  define dented_normal  3
+</pre>
+
+See also the file texture.txt for a little more explanation.
+
+
+<h4><a name=2.4.3.2>Functional Textures</a></h4>
+<p>
+The most general and flexible texture type is the functional texture.
+These textures are evaluated at run-time based on the expressions
+given for the components of the lighting model.  The general syntax
+for a surface using a functional texture is:
+
+<pre>
+   special surface {
+     [ surface declaration ]
+   }
+</pre>
+<p>
+In addition to the components usually defined in a surface
+declaration, it is possible to define a function that deflects the
+normal, and a function that modifies the intersection point prior to
+texturing.  The format of the two declarations are:
+
+<pre>
+   position vector
+   normal vector
+</pre>
+
+An example of how a functional texture can be defined is:
+
+<pre>
+   define sin_color_offset (sin(3.14 * fmod(x*y*z,1) + otheta)+1)/2
+   define sin_color &lt;sin_color_offset, 0, 1 - sin_color_offset>
+
+   define xyz_sin_texture
+   texture {
+     special surface {
+       color sin_color
+       ambient 0.2
+       diffuse 0.7
+       specular white, 0.2
+       microfacet Reitz 10
+     }
+   }
+</pre>
+<p>
+In this example, the color of the surface is defined based on the
+location of the intersection point using the vector defined as
+sin_color.  Note that sin_color uses yet another definition.<p>
+
+The position declaration is useful to achieve the effect of
+turbulence.  By adding a solid noise to the position, it is possible
+to add swirl to a basic texture.  For example:
+
+<pre>
+   define white_marble
+   texture {
+     special shiny {
+       color white_marble_map[sawtooth(x)]
+       position P + dnoise(P, 3)
+     }
+</pre>
+<p>
+This will create a basic white marble (which would have very straight,
+even bands of color), and by adding dnoise, swirls the colors around.<p>
+
+The normal declaration is used to add some bumpyness to the surface.
+The bumps can be created with a statement as simple as:
+
+<pre>
+   normal N + (dnoise(P) - &lt;0.5, 0.5, 0.5>)
+</pre>
+<p>
+The value &lt;0.5,0.5,0.5> is subtracted from the dnoise function since
+dnoise only returns positive values in each component.<p>
+
+Note: if the color component has any alpha in it (as the result of a
+lookup from a color map or from an image) then that alpha value will
+be used as the scale for the transmit statement.<p>
+
+
+<h5><a name=2.4.3.2.1>Color maps</a></h5>
+<p>
+Color maps are generally used in noise textures and functional
+textures.  They are a way of representing a spectrum of colors that
+blend from one into another.  Each color is represented as RGB, with
+an optional alpha (transparency) value.  The format of the declaration
+is:
+
+<pre>
+   color_map([low0, high0, &lt;r0, g0, b0>, a0, &lt;r1, g1, b1>, a1]
+             [low1, high1, &lt;r2, g2, b2>, a2, &lt;r3, g3, b3>, a3]
+             ...
+             [lowx, highx, &lt;rx, gx, bx>, ax, &lt;ry, gy, by>, ay])
+</pre>
+<p>
+Note that there are no commas between entries in the color map even
+though commas are required within each entry.  (This is a holdover to
+retain compatibility with earlier versions of Polyray.)  If you don't
+need any transparency in the color map, then the following declaration
+could be used:
+
+<pre>
+   color_map([low0, high0, &lt;r0, g0, b0>, &lt;r1, g1, b1>]
+             [low1, high1, &lt;r2, g2, b2>, &lt;r3, g3, b3>]
+             ...
+             [lowx, highx, &lt;rx, gx, bx>, &lt;ry, gy, by>])
+</pre>
+<p>
+In this case, the alpha is set to 0 for all colors created by the
+color map.  Note that it is possible to mix colors with and without
+alpha value.<p>
+
+Note: If there is an alpha value in the color map, then the amount of
+alpha is used as the scale for the transmit component of the surface.
+To turn off this automatic transparency, use transmit 0.<p>
+
+
+<h6><a name=2.4.3.2.1.1>Using CMAPPER</a></h6>
+<p>
+A good way to build color maps for layered textures is with
+ColorMapper,
+
+<blockquote>
+       Written by : SoftTronics, Lutz + Kretzschmar
+</blockquote>
+<p>
+This is available as CMAP.ZIP in the forum Graphdev on Compuserve.
+This program allows you to build color maps with varying colors and
+transparency values.  The output of this program does have to be
+massaged a little bit to make it into a color map as Polyray
+understands it.  In order to help with this process an IBM executable,
+makemap.exe has been included.  To use this little program, you follow
+these steps:<p>
+
+<blockquote>
+<ol>
+<li>run CMAPPER to create a color map in the standard output (not the POV-Ray
+output format).
+<li>run makemap on that file, giving a name for the new Polyray color map
+definition
+<li>Add this definition to your Polyray data file.
+</ul>
+</blockquote>
+<p>
+If you saved your map as foo.map, and you wanted to add this color map
+to the Polyray data file foo.inc, with the name of foox_map, you would
+then run makemap the following way:
+
+<pre>
+   makemap foo.map foox_map >> foo.inc
+</pre>
+<p>
+This makes the translation from CMAPPER format to Polyray format, and
+appends the output as, define foox_map color_map(...), to the file
+foo.inc.
+
+<h5><a name=2.4.3.2.2>Image maps</a></h5>
+<p>
+Projecting an image onto a surface is one of the most common texturing
+techniques.  There are four types of projection supported: planar,
+cylindrical, spherical, and environment.  Input files for use as image
+maps may be any valid Targa, GIF, or JPEG image.<p>
+
+The declaration of an image map is:
+
+<pre>
+   image("imfile.tga")
+</pre>
+<p>
+Typically, an image will be associated with a variable through a
+definition such as:
+
+<pre>
+   define myimage image("imfile.tga")
+</pre>
+<p>
+The image is projected onto a shape by means of a projection.  The
+four types of projection are declared by:
+
+<pre>
+   planar_imagemap(image, coordinate [, repeat]),
+   cylindrical_imagemap(image, coordinate [, repeat]),
+   spherical_imagemap(image, coordinate)
+   environment_map(coordinate,
+                   environment("img1.tga", "img2.tga", "img3.tga",
+                               "img4.tga", "img5.tga", "img6.tga"))
+</pre>
+<p>
+The planar projection maps the entire raster image into the
+coordinates 0 &lt;= x &lt;= 1, 0 &lt;= z &lt;= 1.  The vector value given as
+coordinate is used to select a color by multiplying the x value by the
+number of columns, and the z value by the number of rows.  The color
+appearing at that position in the raster will then be returned as the
+result.  If a repeat value is given then entire surface, repeating
+between every integer Value of x and/or z.<p>
+
+The planar image map is also used for wrapping images based on u/v
+coordinates.  By using the vector &lt;u, 0, v>, the planar image map will
+automatically wrap the image around surfaces that have natural u/v
+coordinates (such as sphere, cylinder, torus, etc.).<p>
+
+The cylindrical projection wraps the image about a cylinder that has
+one end at the origin and the other at &lt;0, 1, 0>.  If a repeat value
+is given, then the image will be repeated along the y-axis, if none is
+given, then any part of the object that is not covered by the image
+will be given the color of pixel (0, 0).<p>
+
+The spherical projection wraps the image about an origin centered
+sphere.  The top and bottom seam are folded into the north and south
+poles respectively.  The left and right edges are brought together on
+the positive x axis.<p>
+
+The environment map wraps six images around a point.  This method is a
+standard way to fake reflections by wrapping the images that would be
+seen from a point inside an object around the object.  
+<p>
+
+Following are a couple of examples of objects and textures that make
+use of image maps:
+
+<pre>
+   define hivolt_image image("hivolt.tga")
+   define hivolt_tex
+   texture {
+     special surface {
+       color cylindrical_imagemap(hivolt_image, P, 1)
+       ambient 0.9
+       diffuse 0.1
+     }
+     scale &lt;1, 2, 1>
+     translate &lt;0, -1, 0>
+   }
+   object { cylinder &lt;0, -1, 0>, &lt;0, 1, 0>, 3 hivolt_tex }
+</pre>
+
+and
+
+<pre>
+   define disc_image image("test.tga")
+   define disc_tex
+   texture {
+     special surface {
+       color planar_imagemap(disc_image, P)
+       ambient 0.9
+       diffuse 0.1
+     }
+     translate &lt;-0.5, 0, -0.5>
+     scale &lt;7*4/3, 1, 7>
+     rotate &lt;90, 0, 0>
+   }
+   object {
+     disc &lt;0, 0, 0>, &lt;0, 0, 1>, 6
+     u_steps 10
+     disc_tex
+   }
+</pre>
+<p>
+Note: If there is an alpha/opacity value in the image map, then the
+amount of opacity is used as the scale for the transmit component of
+the surface.  To turn off this automatic transparency, use transmit 0.<p>
+
+
+<h5><a name=2.4.3.2.3>Bumpmaps</a></h5>
+<p>
+Bumpmaps are declared using the same sort of projections as image maps
+(excepting environment maps).  The following are the valid
+declarations of bump maps:
+
+<pre>
+   planar_bumpmap(image, coordinate [, bump size]),
+   cylindrical_bumpmap(image, coordinate [, bump size]),
+   spherical_bumpmap(image, coordinate [, bump size])
+</pre>
+<p>
+Instead of an optional repeat argument, bumpmaps have an optional bump
+size argument.  If this argument is left out, then the bump size is
+set to one.  Note that negative bump values are allowed and cause the
+bumps to appear to project the other way.<p>
+
+Any Targa image can be used, but for best results greyscale or color
+mapped images are best.  The following declarations show how a bump
+map can be applied to objects:
+
+<pre>
+   include "colors.inc"
+
+   define tile_bumps image("tile1.tga")
+
+   define bumpmap_red1
+   texture {
+     special shiny {
+       color red
+       normal planar_bumpmap(tile_bumps, &lt;8*u, 0, 6*v>, 1)
+     }
+   }
+   object {
+       object { torus 2, 0.75, &lt;0, -1.25, 0>, &lt;0, 1, 0> }
+     + object { cone &lt;0, -2, 0>, 1, &lt;0, 3, 0>, 0 }
+     + object { sphere &lt;2, 0, 4>, 2 }
+     bumpmap_red1
+   }
+</pre>
+<p>
+The bumpmap is declared using u/v coordinates so that it will follow
+the natural coordinates of the object.  This ensures that it wraps
+properly around the torus, cone, and sphere in the example above.
+There is an automatic wrapping of bump maps, so there will be 8 tiles
+in the u direction and 6 tiles in the v direction of each object.<p>
+
+
+
+<h4><a name=2.4.3.3>Indexed Textures and Texture Maps</a></h4>
+<p>
+A texture map is declared in a manner similar to color maps.  There is
+a list of value pairs and texture pairs, for example:
+
+<pre>
+   define index_tex_map
+      texture_map([-2, 0, red_blue_check, bumpy_green],
+                  [0, 2, bumpy_green, reflective_blue])
+</pre>
+<p>
+Note that for texture maps there is a required comma separating each
+of the entries.<p>
+
+These texture maps are complimentary to the indexed texture (see
+below).  Two typical uses of indexed textures are to use solid
+texturing functions to select (and optionally blend) between complete
+textures rather than just colors, and to use image maps as a way to
+map textures to a surface.<p>
+
+For example, using the texture map above on a sphere can be done
+accomplished with the following:
+
+<pre>
+  object {
+    sphere &lt;0, 0, 0>, 2
+    texture { indexed x, index_tex_map }
+  }
+</pre>
+<p>
+The indexed texture uses a lookup function (in example above a simple
+gradient along the x axis) to select from the texture map that
+follows.  See the data file indexed1.pi for the complete example.<p>
+
+As an example of using an image map to place textures on a surface,
+the following example uses several textures, selected by the color
+values in an image map.  The function indexed_map returns the color
+index value from a color mapped image (or uses the red channel in a
+raw image).  The example below is equivalent to creating a material
+map in the POV-Ray raytracer.<p>
+
+<pre>
+  object {
+    sphere &lt;0, 0, 0>, 1
+    texture {
+      indexed indexed_map(image("txmap.tga"), &lt;x, 0, y>, 1),
+              texture_map([1, 1, mirror, mirror],
+                          [2, 2, bright_pink, bright_pink],
+                          [3, 3, Jade, Jade])
+      translate &lt;-0.5, -0.5, 0> // center image
+    }
+  }
+</pre>
+<p>
+In this example, the image is oriented in the x-y plane and centered
+on the origin.  The only difference between a indexed_map and a
+planar_imagemap is that the first (indexed_map) returns the index of
+the color in the image and the second returns the color itself.  Note
+that the texture map shown above has holes in it (between the integer
+values), however this isn't a problem as the indexed_map function will
+only produce integers.
+
+
+<h4><a name=2.4.3.4>Layered Textures</a></h4>
+<p>
+Layered textures allow you to stack multiple textures on top of each
+other.  If a part of the texture is not completely opaque (non-zero
+alpha), then the layers below will show through.  For example, the
+following texture creates a texture with a marble outer layer and a
+mirrored bottom layer and applies it to a sphere:
+
+<pre>
+   include "colors.inc"
+
+   define marble_alpha_map
+      color_map([0.0, 0.2, white, 0,   white, 0]
+                [0.2, 0.5, white, 0,   black, 0.2]
+                [0.6, 1.0, black, 0.2, black, 1])
+
+   define mirror_veined_marble
+   texture {
+     layered
+       texture {
+          special shiny { color marble_alpha_map[marble_fn] }
+       },
+     mirror
+   }
+
+   object {
+     sphere &lt;0, 0, 0>, 2
+     mirror_veined_marble
+   }
+</pre>
+
+
+
+<h4><a name=2.4.3.5>Summed Textures</a></h4>
+<p>
+Summed textures simply add weighted amounts of a number of textures
+together to make the final color.  The syntax is:
+
+<pre>
+   texture {
+     summed f1, tex1, f2, tex2, ...
+   }
+</pre>
+<p>
+The expressions f1, f2, ... are numeric expressions.  The expressions
+tex1, ... are textures.<p>
+
+
+
+<h2><a name=2.5>Comments</a></h2>
+<p>
+Comments follow the standard C/C++ formats.  Multiple line comments
+are enclosed by /* ... */ and single line comments are preceeded by
+//.<p>
+
+Single line comments are allowed and have the following format:
+
+<pre>
+   // [ any text to end of the line ]
+</pre>
+<p>
+As soon as the two characters // are detected, the rest of the line is
+considered a comment.
+
+<h2><a name=2.6>Animation support</a></h2>
+<p>
+An animation is generated by rendering a series of frames, numbered
+from 0 to some total value.  The declarations in Polyray that support
+the generation of multiple Targa images are:<p>
+
+<center><table border cellspacing=1 cellpadding=3>
+<caption align=bottom>Declarations for animation support</caption>
+<tr><th>Declaration<th>Description
+<tr><td>total_frames val<td>The total number of frames in the animation
+<tr><td>start_frame val<td>The value of the first frame to be rendered
+<tr><td>end_frame val<td>The last frame to be rendered
+<tr><td>frame_time val<td>Duration of each frame (for particles)
+<tr><td>outfile "name"<br>outfile name<td>Polyray appends the frame number to 'name'
+in order to generate distinct Targa files.
+</table></center><p>
+
+The values of total_frames, start_frame, and end_frame, as well as the
+value of the current frame, frame, are usable in arithmetic
+expressions in the input file.  Note that these statements should
+appear before the use of: total_frames, start_frame, end_frame, or
+frame as a part of an expression.  Typically I put the declarations
+right at the top of the file.<p>
+
+WARNING: if the string given for outfile is longer than 5 characters,
+the three digit frame number that is appended will be truncated by
+DOS.  Make sure this string is short enough or you will end up
+overwriting image files.<p>
+
+
+
+<h2><a name=2.7>Conditional processing</a></h2>
+
+<p>
+In support of animation generation (and also because I sometimes like
+to toggle attributes of objects), polyray supports limited conditional
+processing.  The syntax for this is:
+
+<pre>
+   if (cexper) {
+     [object/light/... declarations]
+   } else {
+     [other object/light/... declarations]
+   }
+</pre>
+<p>
+
+The use of conditional statements is limited to the top level of the
+data file.  You cannot put a conditional within an object or texture
+declaration. i.e.
+
+<pre>
+   object {
+     if (foo == 42) {
+       sphere &lt;0, 0, 0>, 4
+     } else {
+       disc &lt;0, 0, 0>, &lt;0, 1, 0>, 4
+     }
+   }
+</pre>
+<p>
+is not a valid use of an if statement, whereas:
+
+<pre>
+   if (foo == 42) {
+     object {
+       sphere &lt;0, 0, 0>, 4
+     }
+   } else {
+     object {
+       disc &lt;0, 0, 0>, &lt;0, 1, 0>, 4
+     }
+   }
+</pre>
+or
+<pre>
+   if (foo == 42)
+     object { sphere &lt;0, 0, 0>, 4 }
+   else if (foo = 12) {
+     object { torus 3.0, 1.0, &lt;0, 0, 0>, &lt;0, 1, 0> }
+     object { cylinder &lt;0, -1, 0>, &lt;0, 1, 0>, 0.5 }
+   } else
+      object { disc &lt;0, 0, 0>, &lt;0, 1, 0>, 4 }
+</pre>
+
+are valid.<p>
+
+Note: the curly brackets { } are required if there are multiple
+statements within the conditional, and not required if there is a
+single statement.
+
+<h2><a name=2.8>Include files</a></h2>
+<p>
+In order to allow breaking an input file into several files (as well
+as supporting the use of library files), it is possible to direct
+polyray to process another file.  The syntax is:
+
+<pre>
+   include "filename"
+</pre>
+
+Beware that trying to use #include ... will fail.
+
+<h2><a name=2.9>File flush</a></h2>
+<p>
+Due to unforeseen occurrences, like power outages, or roommates that
+hit the reset button so they can do word processing, it is possible to
+specify how often the output file will be flushed to disk.  The
+default is to wait until the entire file has been written before a
+flush (which is a little quicker but you lose everything if a crash
+occurs).<p>
+
+The format of the declaration is:
+
+<pre>
+   file_flush xxx
+</pre>
+<p>
+The number xxx indicates the maximum number of pixels that will be
+written before a file flush will occur.  This value can be as low as 1
+- this will force a flush after every pixel (only for the very
+paranoid).
+
+
+</body>
+</html>
+
