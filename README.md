@@ -19,7 +19,9 @@ Compile with make.
 
 A new open source version is being developed.
 
+
 LICENSE
+
 This software may be used for any private and non-commercial  use.
 
   You may not distribute this software, in whole or in part,
