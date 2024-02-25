@@ -3,6 +3,7 @@
    Support routines for reusable objects, strings, vectors, ...
 
   Copyright (C) 1993-1996, Alexander Enzmann, All rights reserved.
+  Additions (C) 1999-2024, Clyde Meli, All rights reserved.
 
   This software may be used for any private and non-commercial
   use.
@@ -74,9 +75,9 @@ int Optimizer = 1;        /* Slabs, array based sorting */
 Flt minweight = 0.01;
 int maxlevel = MAXLEVEL;
 int tickflag = 2;
-int antialias = 0; /* 0=none, 1=filter, 2-3=adaptive */
-int maxsamples = 4;
-Flt antialias_threshold = 0.0004;
+int antialias = 2; //previously:0; /* 0=none, 1=filter, 2-3=adaptive */
+int maxsamples = DEFAULT_SAMPLES; //previously:4;
+Flt antialias_threshold = DEFAULT_THRESHOLD*DEFAULT_THRESHOLD; //previously:0.0004;
 
 long MaxBufferRAM = 2048L * 2048L; /* Maximum RAM (in Kbytes) used by S&Z buffers */
 
