@@ -2630,11 +2630,7 @@ void start_include(char *name)
 	#endif
    int len;
    char *strtmp;
-   char myenviron[]="POLYRAY_DATA";//c:\\polyray\0";
-
-//environ=&myenviron[0];//real environ is buggy? so have to ignore it 2006 version
-//printf("could not copy environ\n");
-//printf("environ=%s\n",myenviron);
+   char myenviron[]="POLYRAY_PATH";//c:\\polyray\0";
 
    if (File_Name_Depth >= MAX_FILE_DEPTH)
       warning("Include files nested too deep\n");
