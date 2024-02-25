@@ -173,6 +173,9 @@ inline int _kbhit() {
 #define SLABS  1
 #define BSP    2
 
+#define DEFAULT_SAMPLES 25
+#define DEFAULT_THRESHOLD 0.2
+
 #define SHADOW_CHECK      0x0001
 #define REFLECT_CHECK     0x0002
 #define TRANSMIT_CHECK    0x0004
