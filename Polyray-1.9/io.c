@@ -29,16 +29,15 @@ extern int yylineno;
 
 FILE *PathFileOpen(char *environn, char *str, char *options)
 {
-   char *path, tenviron[128], filename[256];
+   char *path, tenviron[256], filename[256];
    FILE *file;
 
-   if (environn == NULL)
+   if (environn == NULL) 
      return fopen(str, options);
-
 
    if ((file = fopen(str, options)) != NULL)
          return file;
-
+   
    char *ename=NULL;
    #if defined(_MSC_VER)
    size_t len;
@@ -75,14 +74,17 @@ FILE *PathFileOpen(char *environn, char *str, char *options)
 
    #endif
 
-      /* Make local to prevent overwriting something important */
-   snprintf(tenviron, 126, "%s", ename); //CM:8/3/06 avoid segfaultf(
 
    if (ename != NULL) {
-      for (path = strtok(ename, " ;");
+      for (path = strtok(ename, ";");
            path != NULL;
-           path = strtok(NULL, " ;")) {
+           path = strtok(NULL, ";")) {
          sprintf(filename, "%s/%s", path, str);
+
+         if ((file = fopen(filename, options)) != NULL)
+            return file;
+         
+         sprintf(filename, "%s/DAT/%s", path, str);
 
          if ((file = fopen(filename, options)) != NULL)
             return file;
