@@ -488,7 +488,7 @@ read_defaults(int argc, char **argv, char *outfilename,
       case 'T':
          antialias_threshold = atof(optarg1);
          if (antialias_threshold < 0.0) {
-            warning("Antialias threshold must be >= 0.0, reset to 0.02\n");
+            warning("Antialias threshold must be >= 0.0, reset to DEFAULT/0.02\n");
             antialias_threshold = 0.02;
             }
          antialias_threshold *= antialias_threshold;
