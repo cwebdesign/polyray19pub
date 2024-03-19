@@ -17,7 +17,6 @@
   for any purpose.  It is provided solely "as is".
 
 */
-
 #include "defs.h"
 #include "vector.h"
 #include "io.h"
@@ -105,15 +104,13 @@ urandom(void)
 }
 
 /* Return a uniform random value in [0, 1] */
-Flt
-OLDpolyray_random(void)
+Flt OLDpolyray_random(void)
 {
    return (Flt)urandom() / 65535.0;
 }
 
 /* Return a uniform random value in [0, 1] */
-Flt
-polyray_random(void)
+Flt polyray_random(void)
 {
   if (flagran > 999) flagran=0;
   return urandomdat[flagran++];
@@ -179,8 +176,8 @@ VecNormalize(Vec vec)
 }
 #else
 
-/* Copyright C. Meli */
-Flt VecNormalize(Vec vec)
+Flt
+VecNormalize(Vec vec)
 {
    Flt len, scl;
    len = VecDot(vec, vec);
@@ -195,7 +192,6 @@ Flt VecNormalize(Vec vec)
       }
    return(len);
 }
-/* end CM*/
 #endif
 
 
@@ -224,104 +220,148 @@ MIdentity(Matrix result)
            result[i][j] = 0.0;
 }
 
-/* Code by C. Meli */
 void
-MCopy(Matrix result, Matrix src)
+MTimes(Matrix result, Matrix matrix1, Matrix matrix2)
 {
-   int i, j;
-   for (i=0;i<4;i++)
-     for (j=0;j<4;j++)
-       result[i][j]=src[i][j];
+   int i, j, k;
+   Matrix temp_matrix;
+
+   //for (i = 0 ; i < 4 ; i++)
+   //   for (j = 0 ; j < 4 ; j++) {
+     for (i=4;i--;)
+       for (j=4;j--;) {
+         temp_matrix[i][j] = 0.0;
+         //for (k = 0 ; k < 4 ; k++)
+         for (k=4;k--;)
+            temp_matrix[i][j] += matrix1[i][k] * matrix2[k][j];
+         }
+
+   //for (i = 0 ; i < 4 ; i++)
+   //   for (j = 0 ; j < 4 ; j++)
+   for (i=4;i--;)
+     for (j=4;j--;)
+         result[i][j] = temp_matrix[i][j];
 }
 
 
-#if defined(__APPLE__) || !defined(EXPERIMENTALMATRIX) 
-void MTimes(Matrix result, Matrix a, Matrix b)
+/* CM: Strassen's algorithm to multiply two 2x2 matrices, from
+http://csg-www.lcs.mit.edu:8001/monsoon/tr40/subsection3_5_1.html
+Uses 7 multiplications rather than 8
+*/
+
+#define MATA(i,j) (matrix1[i-1][j-1])
+#define MATB(i,j) (matrix2[i-1][j-1])
+
+void
+MStrassen2(Matrix2 result, Matrix2 matrix1, Matrix2 matrix2)
 {
-  result[0][0] = a[0][0] * b[0][0] + a[0][1] * b[1][0] + a[0][2] * b[2][0] + a[0][3] * b[3][0];
-  result[0][1] = a[0][0] * b[0][1] + a[0][1] * b[1][1] + a[0][2] * b[2][1] + a[0][3] * b[3][1];
-  result[0][2] = a[0][0] * b[0][2] + a[0][1] * b[1][2] + a[0][2] * b[2][2] + a[0][3] * b[3][2];
-  result[0][3] = a[0][0] * b[0][3] + a[0][1] * b[1][3] + a[0][2] * b[2][3] + a[0][3] * b[3][3];
-  result[1][0] = a[1][0] * b[0][0] + a[1][1] * b[1][0] + a[1][2] * b[2][0] + a[1][3] * b[3][0];
-  result[1][1] = a[1][0] * b[0][1] + a[1][1] * b[1][1] + a[1][2] * b[2][1] + a[1][3] * b[3][1];
-  result[1][2] = a[1][0] * b[0][2] + a[1][1] * b[1][2] + a[1][2] * b[2][2] + a[1][3] * b[3][2];
-  result[1][3] = a[1][0] * b[0][3] + a[1][1] * b[1][3] + a[1][2] * b[2][3] + a[1][3] * b[3][3];
-  result[2][0] = a[2][0] * b[0][0] + a[2][1] * b[1][0] + a[2][2] * b[2][0] + a[2][3] * b[3][0];
-  result[2][1] = a[2][0] * b[0][1] + a[2][1] * b[1][1] + a[2][2] * b[2][1] + a[2][3] * b[3][1];
-  result[2][2] = a[2][0] * b[0][2] + a[2][1] * b[1][2] + a[2][2] * b[2][2] + a[2][3] * b[3][2];
-  result[2][3] = a[2][0] * b[0][3] + a[2][1] * b[1][3] + a[2][2] * b[2][3] + a[2][3] * b[3][3];
-  result[3][0] = a[3][0] * b[0][0] + a[3][1] * b[1][0] + a[3][2] * b[2][0] + a[3][3] * b[3][0];
-  result[3][1] = a[3][0] * b[0][1] + a[3][1] * b[1][1] + a[3][2] * b[2][1] + a[3][3] * b[3][1];
-  result[3][2] = a[3][0] * b[0][2] + a[3][1] * b[1][2] + a[3][2] * b[2][2] + a[3][3] * b[3][2];
-  result[3][3] = a[3][0] * b[0][3] + a[3][1] * b[1][3] + a[3][2] * b[2][3] + a[3][3] * b[3][3];
+  Flt p1,p2,p3,p4,p5,p6,p7;
+  p1 = (MATA(1,1)+MATA(2,2))*(MATB(1,1)+MATB(2,2));
+  p2 = (MATA(2,1)+MATA(2,2))*MATB(1,1);
+  p3 = MATA(1,1)*(MATB(1,2)-MATB(2,2));
+  p4 = MATA(2,2)*(MATB(2,1)-MATB(1,1));
+  p5 = (MATA(1,1)+MATA(1,2))*MATB(2,2);
+  p6 = (MATA(2,1)-MATA(1,1))*(MATB(1,1)+MATB(1,2));
+  p7 = (MATA(1,2)-MATA(2,2))*(MATB(2,1)+MATB(2,2));
+  result[1-1][1-1] = p1+p4-p5+p7;
+  result[1-1][2-1] = p3+p5;
+  result[2-1][1-1] = p2+p4;
+  result[2-1][2-1] = p1+p3-p2+p6;
 
 }
-#else
-//based on
-//https://stackoverflow.com/questions/18499971/efficient-4x4-matrix-multiplication-c-vs-assembly/18508113#18508113
-SuperMatrix myMultiply(SuperMatrix M1, SuperMatrix M2) {
-    // Perform a 4x4 matrix multiply by a 4x4 matrix
-    // Be sure to run in 64 bit mode and set right flags
-    // Properties, C/C++, Enable Enhanced Instruction, /arch:AVX
-    // Having MATRIX on a 32 byte boundry does help performance
-    SuperMatrix mResult;
-    __m256 a0, a1, b0, b1;
-    __m256 c0, c1, c2, c3, c4, c5, c6, c7;
-    __m256 t0, t1, u0, u1;
 
-    t0 = M1.n[0];                                                   // t0 = a00, a01, a02, a03, a10, a11, a12, a13
-    t1 = M1.n[1];                                                   // t1 = a20, a21, a22, a23, a30, a31, a32, a33
-    u0 = M2.n[0];                                                   // u0 = b00, b01, b02, b03, b10, b11, b12, b13
-    u1 = M2.n[1];                                                   // u1 = b20, b21, b22, b23, b30, b31, b32, b33
 
-    a0 = _mm256_shuffle_ps(t0, t0, _MM_SHUFFLE(0, 0, 0, 0));        // a0 = a00, a00, a00, a00, a10, a10, a10, a10
-    a1 = _mm256_shuffle_ps(t1, t1, _MM_SHUFFLE(0, 0, 0, 0));        // a1 = a20, a20, a20, a20, a30, a30, a30, a30
-    b0 = _mm256_permute2f128_ps(u0, u0, 0x00);                      // b0 = b00, b01, b02, b03, b00, b01, b02, b03
-    c0 = _mm256_mul_ps(a0, b0);                                     // c0 = a00*b00  a00*b01  a00*b02  a00*b03  a10*b00  a10*b01  a10*b02  a10*b03
-    c1 = _mm256_mul_ps(a1, b0);                                     // c1 = a20*b00  a20*b01  a20*b02  a20*b03  a30*b00  a30*b01  a30*b02  a30*b03
 
-    a0 = _mm256_shuffle_ps(t0, t0, _MM_SHUFFLE(1, 1, 1, 1));        // a0 = a01, a01, a01, a01, a11, a11, a11, a11
-    a1 = _mm256_shuffle_ps(t1, t1, _MM_SHUFFLE(1, 1, 1, 1));        // a1 = a21, a21, a21, a21, a31, a31, a31, a31
-    b0 = _mm256_permute2f128_ps(u0, u0, 0x11);                      // b0 = b10, b11, b12, b13, b10, b11, b12, b13
-    c2 = _mm256_mul_ps(a0, b0);                                     // c2 = a01*b10  a01*b11  a01*b12  a01*b13  a11*b10  a11*b11  a11*b12  a11*b13
-    c3 = _mm256_mul_ps(a1, b0);                                     // c3 = a21*b10  a21*b11  a21*b12  a21*b13  a31*b10  a31*b11  a31*b12  a31*b13
+#define MAT2ADD(r,i,j) {(r)[0][0]=(i)[0][0]+(j)[0][0];(r)[0][1]=(i)[0][1]+(j)[0][1];(r)[1][0]=(i)[1][0]+(j)[1][0];(r)[1][1]=(i)[1][1]+(j)[1][1];}
+#define MAT2SUB(r,i,j) {(r)[0][0]=(i)[0][0]-(j)[0][0];(r)[0][1]=(i)[0][1]-(j)[0][1];(r)[1][0]=(i)[1][0]-(j)[1][0];(r)[1][1]=(i)[1][1]-(j)[1][1];}
+#define MAT2MUL(r,i,j) {MStrassen2((r),(i),(j));}
 
-    a0 = _mm256_shuffle_ps(t0, t0, _MM_SHUFFLE(2, 2, 2, 2));        // a0 = a02, a02, a02, a02, a12, a12, a12, a12
-    a1 = _mm256_shuffle_ps(t1, t1, _MM_SHUFFLE(2, 2, 2, 2));        // a1 = a22, a22, a22, a22, a32, a32, a32, a32
-    b1 = _mm256_permute2f128_ps(u1, u1, 0x00);                      // b0 = b20, b21, b22, b23, b20, b21, b22, b23
-    c4 = _mm256_mul_ps(a0, b1);                                     // c4 = a02*b20  a02*b21  a02*b22  a02*b23  a12*b20  a12*b21  a12*b22  a12*b23
-    c5 = _mm256_mul_ps(a1, b1);                                     // c5 = a22*b20  a22*b21  a22*b22  a22*b23  a32*b20  a32*b21  a32*b22  a32*b23
 
-    a0 = _mm256_shuffle_ps(t0, t0, _MM_SHUFFLE(3, 3, 3, 3));        // a0 = a03, a03, a03, a03, a13, a13, a13, a13
-    a1 = _mm256_shuffle_ps(t1, t1, _MM_SHUFFLE(3, 3, 3, 3));        // a1 = a23, a23, a23, a23, a33, a33, a33, a33
-    b1 = _mm256_permute2f128_ps(u1, u1, 0x11);                      // b0 = b30, b31, b32, b33, b30, b31, b32, b33
-    c6 = _mm256_mul_ps(a0, b1);                                     // c6 = a03*b30  a03*b31  a03*b32  a03*b33  a13*b30  a13*b31  a13*b32  a13*b33
-    c7 = _mm256_mul_ps(a1, b1);                                     // c7 = a23*b30  a23*b31  a23*b32  a23*b33  a33*b30  a33*b31  a33*b32  a33*b33
-
-    c0 = _mm256_add_ps(c0, c2);                                     // c0 = c0 + c2 (two terms, first two rows)
-    c4 = _mm256_add_ps(c4, c6);                                     // c4 = c4 + c6 (the other two terms, first two rows)
-    c1 = _mm256_add_ps(c1, c3);                                     // c1 = c1 + c3 (two terms, second two rows)
-    c5 = _mm256_add_ps(c5, c7);                                     // c5 = c5 + c7 (the other two terms, second two rose)
-
-                                                                    // Finally complete addition of all four terms and return the results
-    mResult.n[0] = _mm256_add_ps(c0, c4);       // n0 = a00*b00+a01*b10+a02*b20+a03*b30  a00*b01+a01*b11+a02*b21+a03*b31  a00*b02+a01*b12+a02*b22+a03*b32  a00*b03+a01*b13+a02*b23+a03*b33
-                                                //      a10*b00+a11*b10+a12*b20+a13*b30  a10*b01+a11*b11+a12*b21+a13*b31  a10*b02+a11*b12+a12*b22+a13*b32  a10*b03+a11*b13+a12*b23+a13*b33
-    mResult.n[1] = _mm256_add_ps(c1, c5);       // n1 = a20*b00+a21*b10+a22*b20+a23*b30  a20*b01+a21*b11+a22*b21+a23*b31  a20*b02+a21*b12+a22*b22+a23*b32  a20*b03+a21*b13+a22*b23+a23*b33
-                                                //      a30*b00+a31*b10+a32*b20+a33*b30  a30*b01+a31*b11+a32*b21+a33*b31  a30*b02+a31*b12+a32*b22+a33*b32  a30*b03+a31*b13+a32*b23+a33*b33
-    return mResult;
-}
-
-void MTimes(Matrix result, Matrix a, Matrix b)
+void
+MStrassen2Mat(Matrix2 C11,Matrix2 C12,Matrix2 C21,Matrix2 C22, Matrix2 a11,Matrix2 a12,Matrix2 a21,Matrix2 a22 , Matrix2 b11,Matrix2 b12,Matrix2 b21,Matrix2 b22)
 {
-	SuperMatrix m1, m2;
-	MCopy(m1.f,a);MCopy(m2.f,b);
-	//m1.f=a;m2.f=b;
-    SuperMatrix res=myMultiply(m1,m2);
-	result=res.f;
-}
-#endif
+  Matrix2 p1,p2,p3,p4,p5,p6,p7,temp,temp2; //,C11,C12,C21,C22;
 
-/* end new code by CM */
+ // work out p1..p7
+ MAT2ADD(temp,a11,a22);
+ MAT2ADD(temp2,b11,b22);
+ MAT2MUL(p1,temp,temp2);
+
+ MAT2ADD(temp,a21,a22);
+ MAT2MUL(p2,temp,b11);
+
+ MAT2SUB(temp,b12,b22);
+ MAT2MUL(p3,a11,temp);
+
+ MAT2SUB(temp,b21,b11);
+ MAT2MUL(p4,a22,temp);
+
+
+ MAT2ADD(temp,a11,a12);
+ MAT2MUL(p5,temp,b22);
+
+ MAT2SUB(temp,a21,a11);
+ MAT2ADD(temp2,b11,b12);
+ MAT2MUL(p6,temp,temp2);
+
+ MAT2SUB(temp,a12,a22);
+ MAT2ADD(temp2,b21,b22);
+ MAT2MUL(p7,temp,temp2);
+
+
+
+ // work out C11..C22
+ MAT2ADD(temp,p1,p4);
+ MAT2SUB(temp2,temp,p5);
+ MAT2ADD(C11,temp2,p7);
+
+ MAT2ADD(C21,p2,p4);
+
+ MAT2ADD(C12,p3,p5);
+
+ MAT2ADD(temp,p1,p3);
+ MAT2SUB(temp2,temp,p2);
+ MAT2ADD(C22,temp2,p6);
+
+
+
+
+
+
+
+ // now put values in C11..C22 into return MMatrix2
+
+//=C11
+// memcpy(result[1-1][1-1],C11,sizeof(Matrix2));
+//C12
+// memcpy(result[1-1][2-1],C12,sizeof(Matrix2));
+//C21
+// memcpy(result[2-1][1-1],C21,sizeof(Matrix2));
+//C22
+//memcpy(result[2-1][2-1],C22,sizeof(Matrix2));
+
+}
+
+
+/*
+function C = strass(A,B,n0)
+n = rows(A)
+if n<=n0 then C=AB
+else
+  m=n/2;u=1:m;v=m+1:n; (1:n means loop from 1 to n !!)
+  p1=strass(A(u,u)+A(v,v),B(u,u)+B(v,v),n0)
+  p2=strass(A(v,u)+A(v,v)
+
+*/
+
+/* n=4. so m=2;u loops 1 to 2 */
+
+#define SETMAT2(m,p,q,r,s) {(m)[0][0]=(p);(m)[0][1]=(q);(m)[1][0]=(r);(m)[1][1]=(s);}
+
+// #define PLUGVALUES(m,a) {SETMAT2((m),(a)[0],(a)[1],(a)[2],(a)[3]);}
+
+
+
 
 void
 MAdd(Matrix result, Matrix matrix1, Matrix matrix2)
@@ -402,11 +442,12 @@ TxVec(Vec out, Vec vec, Transform *tx)
       return;
       }
 
-   for (i=0;i<3;i++)
+   for (i=0;i<3;i++) {
       result[i] = vec[0] * (*matrix)[0][i] +
                   vec[1] * (*matrix)[1][i] +
                   vec[2] * (*matrix)[2][i] +
                            (*matrix)[3][i];
+   }
    for (i=0;i<3;i++)
       out[i] = result[i];
 }
