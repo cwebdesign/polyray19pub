@@ -19,6 +19,8 @@ Compile with make.
 
 A new open source version is being developed.
 
+A beta GPT tutor is available:
+https://chatgpt.com/g/g-JVuMbYmDl-polyray-mentor
 
 LICENSE
 
