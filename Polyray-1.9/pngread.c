@@ -4,6 +4,7 @@
 #include "io.h"
 #include "jpeg.h"
 
+//todo:replace this png code to use a modern library
 #define LITTLE_ENDIAN
 
 #include "pngread.h"
