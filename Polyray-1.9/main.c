@@ -440,7 +440,8 @@ read_defaults(int argc, char **argv, char *outfilename,
          File_Generation_Flag = 0;
          break;
       case 'o':
-         strcpy(outfilename, optarg1);
+	 strncpy(outfilename, optarg1,sizeof(outfilename)-1);
+         outfilename[sizeof(outfilename)-1] = '\0';
          break;
       case 'O':
          Optimizer = atoi(optarg1);
