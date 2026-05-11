@@ -207,7 +207,7 @@ void message(char *fmt, ...)
      /* CM added 28/2/2002 - wintarget */
       #if defined (WINTARGET)
 
-        vsprintf(localtextonscreen, fmt, ap);
+	vsnprintf(localtextonscreen, sizeof(localtextonscreen), fmt, ap);
         strcat(textonscreen,localtextonscreen);
         // next enhancement is to split line by line into a new textonscreen array of strings!
       #else  // end CM
