@@ -88,6 +88,9 @@ The `docs/` folder contains:
 A beta GPT tutor is available:
 https://chatgpt.com/g/g-JVuMbYmDl-polyray-mentor
 
+If you need the old dta to run the demo animations, you can find it here: 
+http://www.povray.org/ftp/pub/povray/utilities/dta/
+
 ## SAST Tools
 
 [PVS-Studio](https://pvs-studio.com/pvs-studio/?utm_source=website&utm_medium=github&utm_campaign=open_source) - static analyzer for C, C++, C#, and Java code.
