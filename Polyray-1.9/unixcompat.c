@@ -44,10 +44,10 @@ OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 void dumpversion(void)
 {
 #if !defined(__GNUC__)
-            status("Polyray v1.9.3 2043, (\"Asteroids\" Build), Compiled with Visual Studio for CIS3105. Portions (C) 1996-2024 Clyde Meli. Copyright (c) 1994 Alexander Enzmann\n");
+            status("Polyray v1.9.5 2026, (\"First Open\" Build), Compiled with Visual Studio for CIS3105. Portions (C) 1996-2024 Clyde Meli. Copyright (c) 1994 Alexander Enzmann\n");
 #else
             //status("Polyray v2.0 2019 (\"PlusPlus 64\" Build), Compiled with GCC 7.4.0(Ubuntu for Windows version) for CIS3105. Portions (C) 1996-2019 Dr Clyde Meli. Copyright (c) 1994 Alexander Enzmann\n");
-            status("Polyray v1.9.3 2024 (\"Travel Malta\" Build), Compiled with GCC for CIS3105. Portions (C) 1996-2024 Dr Clyde Meli. Copyright (c) 1994 Alexander Enzmann\n");
+            status("Polyray v1.9.5 2026 (\"First Open\" Build), Compiled with GCC. Portions (C) 1996-2026 Dr Clyde Meli. Copyright (c) 1994 Alexander Enzmann\n");
 
 #endif
 }
