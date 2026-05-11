@@ -34,7 +34,7 @@ typedef struct lookup_table_struct {
    char *name;
    int val;
    } fn_table;
-static char errbuf[80] ;
+static char errbuf[256];
 #define END(v) (v - 1 + sizeof(v) / sizeof(v[0]))
 #ifndef UNDEFINED
 #define UNDEFINED -1
@@ -157,7 +157,7 @@ check_term0(char *name)
    case UNDEFINED:
       /* This is either a predefined color, or an undefined token */
       if (LookupColorByName(name, tmp) == 0) {
-         sprintf(errbuf, "Token undefined: \"%s\"\n", name);
+         snprintf(errbuf,sizeof(errbuf), "Token undefined: \"%s\"\n", name);
          error(errbuf);
          }
       else {
@@ -167,7 +167,7 @@ check_term0(char *name)
    default:
       if (LookupColorByName(name, tmp) == 0) {
          /* Not the correct # of arguments to this token */
-         sprintf(errbuf, "Wrong # of arguments (0) for: \"%s\"\n", name);
+         snprintf(errbuf,sizeof(errbuf), "Wrong # of arguments (0) for: \"%s\"\n", name);
          error(errbuf);
          }
       else {
@@ -222,7 +222,7 @@ check_term1(char *name, NODE_PTR arg1)
          deallocate_node(arg1);
          }
       else {
-         sprintf(errbuf, "Non-string used for image\n");
+         snprintf(errbuf, sizeof(errbuf), "Non-string used for image\n");
          error(errbuf);
          }
       break;
@@ -261,11 +261,11 @@ check_term1(char *name, NODE_PTR arg1)
          error("MIN/MAX of an object requires predefined object");
       break;
    case UNDEFINED:
-      sprintf(errbuf, "Token undefined: \"%s\"\n", name);
+      snprintf(errbuf, sizeof(errbuf),"Token undefined: \"%s\"\n", name);
       error(errbuf);
    default:
       /* Not the correct # of arguments to this token */
-      sprintf(errbuf, "Wrong # of arguments (1) for: \"%s\"\n", name);
+      snprintf(errbuf, sizeof(errbuf), "Wrong # of arguments (1) for: \"%s\"\n", name);
       error(errbuf);
    }
    return result;
@@ -317,16 +317,16 @@ check_term2(char *name, NODE_PTR arg1, NODE_PTR arg2)
          deallocate_node(arg1);
          }
       else {
-         sprintf(errbuf, "Non-string used for image\n");
+         snprintf(errbuf, sizeof(errbuf),"Non-string used for image\n");
          error(errbuf);
          }
       break;
    case UNDEFINED:
-      sprintf(errbuf, "Token undefined: \"%s\"\n", name);
+      snprintf(errbuf, sizeof(errbuf),"Token undefined: \"%s\"\n", name);
       error(errbuf);
    default:
       /* Not the correct # of arguments to this token */
-      sprintf(errbuf, "Wrong # of arguments (2) for: \"%s\"\n", name);
+      snprintf(errbuf, sizeof(errbuf), "Wrong # of arguments (2) for: \"%s\"\n", name);
       error(errbuf);
    }
    return result;
@@ -357,11 +357,11 @@ check_term3(char *name, NODE_PTR arg1, NODE_PTR arg2, NODE_PTR arg3)
       result = make_fn3_node(arg_name, arg1, arg2, arg3);
       break;
    case UNDEFINED:
-      sprintf(errbuf, "Token undefined: \"%s\"\n", name);
+      snprintf(errbuf, sizeof(errbuf),"Token undefined: \"%s\"\n", name);
       error(errbuf);
    default:
       /* Not the correct # of arguments to this token */
-      sprintf(errbuf, "Wrong # of arguments (3) for: \"%s\"\n", name);
+      snprintf(errbuf, sizeof(errbuf),"Wrong # of arguments (3) for: \"%s\"\n", name);
       error(errbuf);
    }
    return result;
@@ -382,11 +382,11 @@ check_term4(char *name, NODE_PTR arg1, NODE_PTR arg2, NODE_PTR arg3, NODE_PTR ar
       result = make_spline_node(arg1, arg2, arg3, arg4);
       break;
    case UNDEFINED:
-      sprintf(errbuf, "Token undefined: \"%s\"\n", name);
+      snprintf(errbuf, sizeof(errbuf),"Token undefined: \"%s\"\n", name);
       error(errbuf);
    default:
       /* Not the correct # of arguments to this token */
-      sprintf(errbuf, "Wrong # of arguments (4) for: \"%s\"\n", name);
+      snprintf(errbuf, sizeof(errbuf),"Wrong # of arguments (4) for: \"%s\"\n", name);
       error(errbuf);
    }
    return result;
@@ -445,7 +445,7 @@ check_term(char *name, LIST_PTR args)
                deallocate_node(arg[i]);
             }
          else {
-            sprintf(errbuf, "Too many arguments (%d) for %s\n", i, name);
+            snprintf(errbuf, sizeof(errbuf),"Too many arguments (%d) for %s\n", i, name);
             error(errbuf);
             }
       } }
