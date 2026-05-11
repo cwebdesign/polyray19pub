@@ -49,7 +49,6 @@ int File_Name_Depth = 0;
 /* To work with LEX & YACC, we need to be able to manipulate "yyin" and
    "yylineno" */
 extern FILE *yyin;
-/*CM ??? #define yyin stdin */
 extern int yylineno;
 
 FILE *PathFileOpen(const char *environn,const char *str, const char *options)
@@ -235,7 +234,7 @@ warning(char *fmt, ...)
 {
    va_list ap;
 
-   if (warnings_flag) {
+   if (warnings_flag && (message_log!=NULL)) {
       fprintf(message_log, "WARNING: ");
       va_start(ap, fmt);
       vfprintf(message_log, fmt, ap);
@@ -251,7 +250,7 @@ error(char *fmt, ...)
 {
    va_list ap;
 
-   if (errors_flag) {
+   if (errors_flag && (message_log!=NULL)) {
       fprintf(message_log, "ERROR: ");
       va_start(ap, fmt);
       vfprintf(message_log, fmt, ap);
@@ -267,7 +266,7 @@ void
 fatal(char *fmt, ...)
 {
    va_list ap;
-   if (errors_flag) {
+   if (errors_flag && (message_log!=NULL)) {
       fprintf(message_log, "FATAL: ");
       va_start(ap, fmt);
       vfprintf(message_log, fmt, ap);
