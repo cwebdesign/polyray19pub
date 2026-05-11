@@ -852,7 +852,7 @@ LRESULT WINAPI MainWindowProcedure( HWND hWnd,
                  break;
 
            case WM_CREATE:
-                textonscreen=(char *)malloc(90000);
+                textonscreen=(char *)malloc(EXTONSCREEN_SIZE);
                 textonscreen="THE FIRST TEXT\n";
                 hDC=GetDC(hWnd);
                 GetTextMetrics(hDC,&tm);

@@ -5,6 +5,7 @@
 #include <stdarg.h>
 
 #define MAX_FILE_DEPTH       (8)
+#define TEXTONSCREEN_SIZE 90000
 
 /* Central file open routine - this will automatically search
    the directories in the environment variable for places that the
