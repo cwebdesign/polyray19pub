@@ -32,6 +32,12 @@ int warnings_flag = 1;  /* By default, print all warnings */
 int errors_flag = 1;    /* By default, print all errors */
 #define EXIT_NOW(val) { SetMessageLog(NULL); free_all_memory(); exit(val); }
 
+#ifdef _WIN32
+#define PATH_SEPARATORS ";"
+#else
+#define PATH_SEPARATORS ":;"
+#endif
+
 //static
         FILE *message_log = NULL; // = stderr; /* File to write all messages */
 
@@ -46,80 +52,71 @@ extern FILE *yyin;
 /*CM ??? #define yyin stdin */
 extern int yylineno;
 
-FILE *PathFileOpen(char *environn, char *str, char *options)
+FILE *PathFileOpen(const char *environn,const char *str, const char *options)
 {
-   char *path, tenviron[256], filename[256];
+   char *ename, *path; 
+   char *envcopy; 
+   char filename[512];
    FILE *file;
 
-   if (environn == NULL) 
-     return fopen(str, options);
+   if (str == NULL || options == NULL)
+        return NULL;
 
-   if ((file = fopen(str, options)) != NULL)
-         return file;
+   /* If we don't have an environment string, then
+      just use the file name as given. */
+   if (environn == NULL)
+      return fopen(str, options);
    
-   char *ename=NULL;
-   #if defined(_MSC_VER)
-   size_t len;
-   errno_t err = _dupenv_s( &ename, &len, environn);
-   #endif
-   #if defined(__MINGW32__) || defined(__LINUX__) || defined(__APPLE__) || defined(__unix__) || defined(__unix)
-   size_t requiredSize=255;
-
-#if !defined(__APPLE__)
-   getenv_s( &requiredSize, NULL, 0, environn);
-   if (requiredSize == 0)
-   {
-
-         ename=(char*)malloc(1);
-         ename[0]='\0';
-   }
-   else {
-#endif
-      
-      #if defined(__APPLE__)
-      ename=getenv(environn);
-      #else
-      ename = (char*) malloc(requiredSize * sizeof(char));
-      if (!ename)
-      {
-         error("Failed to allocate memory!\n\n");
-         exit(1);
-      }
-      getenv_s( &requiredSize, ename, requiredSize, environn );
-      #endif
-#if !defined(__APPLE__)
-   }
-#endif //APPLE
-
-   #endif
-
-
-   if (ename != NULL) {
-      for (path = strtok(ename, ";");
-           path != NULL;
-           path = strtok(NULL, ";")) {
-         sprintf(filename, "%s/%s", path, str);
-
-         if ((file = fopen(filename, options)) != NULL)
-            return file;
-         
-         sprintf(filename, "%s/DAT/%s", path, str);
-
-         if ((file = fopen(filename, options)) != NULL)
-            return file;
-         }
-   }
-
-   char spat[250];
-   strcpy(spat,"c:\\polyray\\dat\\");
-   strcat(spat,str);
-   if ((file = fopen(spat, options)) != NULL)
+   /* If it's in the local directory, then we use that */
+   if ((file = fopen(str, options)) != NULL)
       return file;
 
+   /* Check all places in the environment variable */
+   ename = getenv(environn);
 
+   /* Make local to prevent overwriting something important */
+	
+   if (ename != NULL && ename[0]!='\0') { 
+      envcopy = (char *)malloc(strlen(ename) + 1);
+      if (envcopy == NULL)
+         return fopen(str, options);
+      strcpy(envcopy, ename);
+
+      /* Step through all the directories listed in the environment
+         variable. */
+      path=strtok(envcopy, PATH_SEPARATORS);
+
+      while(path != NULL) {
+         snprintf(filename, sizeof(filename), "%s/%s", path, str);
+            file = fopen(filename, options);
+            if (file != NULL) {
+                free(envcopy);
+                return file;
+            }
+
+            snprintf(filename, sizeof(filename), "%s/DAT/%s", path, str);
+            file = fopen(filename, options);
+            if (file != NULL) {
+                free(envcopy);
+                return file;
+            }
+
+            path=strtok(NULL,PATH_SEPARATORS);
+      }
+      free(envcopy);
+    }
+
+
+#ifdef _WIN32
+    snprintf(filename, sizeof(filename), "c:\\polyray\\dat\\%s", str);
+    file = fopen(filename, options);
+    if (file != NULL)
+        return file;
+#endif
+      
+   /* Desperate last try in the current directory */
    return fopen(str, options);
 }
-
 
 void
 SetMessageLog(char *str)
