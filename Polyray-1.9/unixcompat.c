@@ -1,5 +1,5 @@
-//unixcompat.c
-/**/  Polyray � MIT Licensed Revival
+/*unixcompat.c */
+/*  Polyray � MIT Licensed Revival
   Copyright (C) 1999-2026, Clyde Meli, All rights reserved.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation
