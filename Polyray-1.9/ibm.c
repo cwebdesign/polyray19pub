@@ -78,7 +78,7 @@ display_close(int wait_flag)
 void display_init(Viewpoint *eye, char *S)
 {
   char s[128];
-  sprintf(s,"Polyray: %s",S);
+  snprintf(s,sizeof(s),"Polyray: %s",S);
   //InitDisplay(eye->view_xres,eye->view_yres,s);
 }
 
@@ -135,7 +135,7 @@ void display_close(int wait_flag)
 void display_init(Viewpoint *eye, char *s1)
 {
   char s[128];
-  sprintf(s,"Polyray: %s",s1);
+  snprintf(s,sizeof(s),"Polyray: %s",s1);
   Display_Flag = 0;
 }
 
