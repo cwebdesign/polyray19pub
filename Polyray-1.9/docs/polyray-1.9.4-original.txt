@@ -27,8 +27,9 @@
                            13th May 2026
                           All Rights Reserved
 
-1 INTRODUCTION & SHAREWARE INFORMATION.............................1
-1.1 License, Acknowledgments and Other Legal Stuff.................2
+1 INTRODUCTION ....................................................1
+1.1 Historical Note................................................1
+1.1.2 License, Acknowledgments and Other Legal Stuff.................2
 1.2 Useful tools...................................................2
 1.2.1 Animation Utilities..........................................3
 1.2.2 Modellers....................................................3
@@ -172,7 +173,7 @@
 5 REVISION HISTORY................................................89
 
                                                                            1
-1 Introduction & Shareware Information
+1 Introduction
 
 The program Polyray is a rendering program for producing scenes of 3D shapes 
 and surfaces.  The means of description range from standard primitives like 
@@ -180,10 +181,14 @@ box, sphere, etc. to 3 variable polynomial expression, and finally (and
 slowest of all) surfaces containing transcendental functions like sin, cos, 
 log.  The files associated with Polyray are distributed in four pieces: the 
 executable, a collection of document files, a collection of sample data files, 
-and a few small utility programs.
+and a few small utility programs. This open source version is now maintained 
+and modified by myself Dr Clyde Meli.
 
 Version 1.5 to 1.8 of Polyray were Shareware. Further versions are modified 
 versions starting from the source code of 1.8 with bug fixes and alterations. 
+
+1.1 Historical Note
+
 Please note that the new modified versions are not supported by the original 
 author, but I still encourage you to support the original author for his 
 development by sending $35 to 
@@ -237,8 +242,16 @@ Compuserve as: Alexander Enzmann 70323,2461
 
 Internet as:   xander@mitre.org
 
+Many thanks go to David Mason for his numerous comments and suggestions (and 
+for adding a new feature to DTA every time I needed to test something).  
+Thanks also to the Cafe Pamplona in Cambridge Ma. for providing a place to get 
+heavily caffinated and rap about ray-tracing and image processing for hours at 
+a time.
 
-1.1 License, Acknowledgments and Other Legal Stuff
+Many thanks to the folks that let me include some of their scenes in the data 
+archive: Jeff Bowermaster, Dan Farmer, and Will Wagner.
+
+1.1.2 License, Acknowledgments and Other Legal Stuff
 
 MIT LICENSE
   Copyright (C) 1993-1996, Alexander Enzmann, All rights reserved.
@@ -260,15 +273,8 @@ OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 
 This software is based in part on the work of the Independent JPEG Group.
 
-Many thanks go to David Mason for his numerous comments and suggestions (and 
-for adding a new feature to DTA every time I needed to test something).  
-Thanks also to the Cafe Pamplona in Cambridge Ma. for providing a place to get 
-heavily caffinated and rap about ray-tracing and image processing for hours at 
-a time.
-
-Many thanks to the folks that let me include some of their scenes in the data 
-archive: Jeff Bowermaster, Dan Farmer, and Will Wagner.
-
+Current Contact: Please visit the github:
+https://github.com/cwebdesign/polyray19pub
 
 1.2 Useful tools
 
@@ -286,14 +292,12 @@ program (in relative order of importance):
      and produce an animation file.
 
                                                                            3
-
-   o An animation viewer for playing an animation on the screen.
+   o A media player for playing an animation on the screen eg Media Player Classic HC.
 
 There are a number of tools out there that can be used in conjunction with 
 Polyray.  I've somewhat arbitrarily divided them into categories, with no 
 particular order of importance.  I'm pretty sure all of the following are 
-available from Compuserve in either the GRAPHDEV or GRAPHSUP forums.  Another 
-place to look is on the net at ftp.povray.org.
+available online.
 
 1.2.1 Animation Utilities
 
@@ -305,10 +309,18 @@ are:
    o Virtualdub (Avery Lee)
    o DTA      (David Mason)
 
+Dave's Targa Animator (DTA) may be the only tool you need for creating 
+FLI/FLCs from images, converting images between formats, compositing images, 
+etc.  For building animations with Polyray, all you need is DTA and a FLI/FLC 
+player - you can use Media Player Classic or even Windows Media Player for that. 
+The last version of DTA 3.0 is available at:
+https://www.povray.org/ftp/pub/povray/utilities/dta/
+
 Using Virtualdub you can combine multiple images into a single AVI file, which
 afterwards can be converted into a Matroska mkv file with Mkvtoolnix.
 
-
+Other programs of note include: FFmpeg, Blender, ImageMagick, Meshlab, GIMP/Krita, 
+Davinci Resolve/Powerdirector (for video editing).
 1.2.2 Modellers
 
 There are a few really good Shareware modellers out there.  Each of them allow 
@@ -609,16 +621,16 @@ of their meaning are:
 
 
  File options:
-   -R              Resume an interrupted trace
-   -z y0 y1        Render from line y0 to line y1
-   -u              Write the output file in uncompressed form
-   -x columns      Set the x resolution
-   -y lines        Set the y resolution
-   -z start_line   Start a trace at a specified line
-   -o filename     Output file name (default "out.tga")
-   -p bits/pixel   Number of bits per pixel 8/16/24/32 (default 24)
-   -d              Render as a depth map
-   -N              Don't generate an image file
+   -R                       Resume an interrupted trace
+   -z y0 y1                 Render from line y0 to line y1
+   -u                       Write the output file in uncompressed form
+   -x columns               Set the x resolution
+   -y lines                 Set the y resolution
+   -z start_line,fin_line   Start a trace at a specified line to another line
+   -o filename              Output file name (default "out.tga")
+   -p bits/pixel            Number of bits per pixel 8/16/24/32 (default 24)
+   -d                       Render as a depth map
+   -N                       Don't generate an image file
 
  Rendering options:
    -M kbytes       Max # of KBytes for image buffer
@@ -630,7 +642,7 @@ of their meaning are:
                    2=wireframe, 3=hidden line, 4=Gouraud shaded,
                    5=raw triangle information,6=uv triangles,
                    7=csg_triangles]
-
+   -G              Output in PPM format (unsupported at the moment) 
 If no arguments are given then Polyray will give a brief description of the 
 command line options.
 
@@ -1199,6 +1211,8 @@ size.
 
 1.8 Display Options (IBM format only)
 
+This section is deprecated but still included for legacy reasons and is not supported by the
+latest version. Future versions will support SDL.
 Polyray supports several VESA display modes.  The table below lists the modes, 
 the command line value to use with '-V x', and the entry in the file 
 polyray.ini to set a default video mode.
