@@ -86,7 +86,7 @@ void display_line(int x0, int y0, int x1, int y1, Vec color)
 {
 }
 
-int getch()
+int getch(void)
 {
   //FlushDisplay();
   if (Display_Flag) {
@@ -121,11 +121,9 @@ void display_box(int x0, int y0, int x1, int y1, Vec color)
 void display_close(int wait_flag)
 {
   if (wait_flag) {
-//    printf("\nFinished. Click into the window to continue\n");
-//    SpecialStatus("Done");
     printf("\nFinished. Press any key to continue\n");
 #if !defined(__APPLE__)
-    getch();
+    _getch();
 #endif
   }
 //  DeinitDisplay();
