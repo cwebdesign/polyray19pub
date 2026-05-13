@@ -235,8 +235,10 @@ istrcmp(char *str1, char *str2)
    int l2 = strlen(str2);
    char temp1[128], temp2[128];
 
-   strcpy(temp1, str1);
-   strcpy(temp2, str2);
+   strncpy(temp1, str1,sizeof(temp1));
+   temp1[sizeof(temp1)]=0;
+   strncpy(temp2, str2,sizeof(temp2));
+   temp2[sizeof(temp2)]=0;
    while (i<l1 && i < l2) {
       if (temp1[i] >= 'A' && temp1[i] <= 'Z') temp1[i] += 32;
       if (temp2[i] >= 'A' && temp2[i] <= 'Z') temp2[i] += 32;
