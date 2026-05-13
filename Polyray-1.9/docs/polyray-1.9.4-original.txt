@@ -594,8 +594,8 @@ of their meaning are:
    -V mode         Display mode while tracing
                        [    0=none,    1-5=8bit,   6-10=15bit,
                         11-15=16bit, 16-20=24bit, 21-22=4bit/EGA  ]
-   -P pallette     Which palette to use [0=grey, 1=666, 2=884, 3=EGA]
-   -e start        Starting index of palette in VGA pallette
+   -P palette     Which palette to use [0=grey, 1=666, 2=884, 3=EGA]
+   -e start        Starting index of palette in VGA palette
    -W              Wait for key before clearing display
    -D dither       Dithering of display [0=no dither, 1 = use dither]
 
@@ -797,12 +797,12 @@ abort.  If the value after the Q is 0, then no abort test will be performed
 it's the equivalent of "abort_test slow".  If 2 then an abort test is 
 performed for every pixel drawn.
 
-- Pallette start 
+- Palette start 
 
-   pallette_start entry
+   palette_start entry
 
-Tells Polyray that if a pallette based display mode is being used then the 
-color entries should start at "entry".  No other entries in the pallette 
+Tells Polyray that if a palette based display mode is being used then the 
+color entries should start at "entry".  No other entries in the palette 
 should be modified.  Note that the value of entry is limited by the total 
 numbers of colors in the mode.
 
