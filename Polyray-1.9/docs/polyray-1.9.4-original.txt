@@ -97,7 +97,7 @@
 2.3.2.9.3.2 Implicit Spherical Height Fields......................45
 2.3.2.9.4 Cylindrical Height Fields...............................46
 2.3.2.9.4.1 File Based Cylindrical Height Fields..................46
-2.3.2.9.4.1 Implicit Cylindrical Height Fields....................46
+2.3.2.9.4.2 Implicit Cylindrical Height Fields....................46
 2.3.2.10 Hypertexture.............................................47
 2.3.2.11 Lathe surfaces...........................................48
 2.3.2.12 NURBS....................................................48
@@ -114,7 +114,7 @@
 2.3.3 Constructive Solid Geometry (CSG)...........................56
 2.3.4 Gridded objects.............................................57
 2.3.5 Particle Systems............................................58
-2.3.5 Finding bounds of objects...................................60
+2.3.6 Finding bounds of objects...................................60
 2.4 Color and lighting............................................61
 2.4.1 Light sources...............................................61
 2.4.1.1 Positional (point) Lights.................................62
@@ -159,11 +159,12 @@
 2.11 System calls.................................................85
 3 FILE FORMATS....................................................86
 3.1 Output image files............................................86
+3.2 Input image files
 3.2.1 Image maps..................................................86
 3.2.2 Depth map formats...........................................86
 3.2.2.1 8 Bit Format..............................................87
 3.2.2.2 16 Bit Format.............................................87
-3.2.2.3 24 Bit Format.............................................97
+3.2.2.3 24 Bit Format.............................................87
 3.2.2.4 32 Bit Format.............................................88
 4 OUTSTANDING ISSUES..............................................88
 4.1 To do list....................................................88
@@ -626,7 +627,7 @@ of their meaning are:
                       8=two sides, 16=check uv, 32=correct normals,
                       63=all flags]
    -r renderer     Rendering method: [0=raytrace, 1=scan convert,
-                   2=wireframe, 3=hidden line, 4=Gourad shaded,
+                   2=wireframe, 3=hidden line, 4=Gouraud shaded,
                    5=raw triangle information,6=uv triangles,
                    7=csg_triangles]
 
@@ -638,7 +639,7 @@ command line options.
 
 The first operation carried out by Polyray is to read the initialization file 
 polyray.ini.  This file can be used to tune a number of the default variables 
-used during rendering.  Polyray searchs for polyray.ini in all directories 
+used during rendering.  Polyray searches for polyray.ini in all directories 
 that appear in the environment variable POLYRAY_PATH.  This variable works 
 just like the PATH variable does in DOS.
 
@@ -657,7 +658,7 @@ others.  The allowed names and values are:
 
 
    abort_test       true/false/on/off/slow
-   alias_threshold  [Value to cause adaptive anitaliasing to start]
+   alias_threshold  [Value to cause adaptive antialiasing to start]
    antialias        none/filter/adaptive1/adaptive2
    clustersize      [# of objects stored in a slab]
    csg_tolerance    [Smallest size triangle that is checked for CSG]
@@ -823,7 +824,7 @@ the scene in the fastest possible time.  (Note that there is no output file
 when wireframe is used.)  Raw triangle output produces an ASCII file of 
 triangles describing the scene.
 
-Three new rendering modes are now supported: hidden line, Gourad shading, and 
+Three new rendering modes are now supported: hidden line, Gouraud shading, and 
 CSG Triangles.  The rendering mode numbers have also changed.  The list is 
 now:
 
@@ -833,7 +834,7 @@ now:
    1 - Scan line polygon rendering (full texturing)
    2 - Wire frame
    3 - Hidden line rendering
-   4 - Gourad shading (texturing at vertices only)
+   4 - Gouraud shading (texturing at vertices only)
    5 - raw triangles
    6 - u/v triangles
    7 - CSG triangles
@@ -843,7 +844,7 @@ For example, to render a data file using hidden line you could type:
    polyray sphere.pi -r 3
 
 Hidden line is pretty much self explanatory - lines in the wireframe that 
-aren't visible due to blocking by other polygons aren't shown.  Gourad shading 
+aren't visible due to blocking by other polygons aren't shown.  Gouraud shading 
 performs a texturing calculation at the corners of all triangles and fills in 
 color by interpolating between the vertices.
 
@@ -1036,10 +1037,10 @@ as a series of polygons.  Each polygon is scan converted using a Z-Buffer for
 depth information, and an image buffer for color information.
 
 There are two variants of this type of rendering: full texturing at every 
-pixel, and Gourad shading.  Gourad shading performs a texturing calculation at 
+pixel, and Gouraud shading.  Gouraud shading performs a texturing calculation at 
 the corners of all triangles and fills in color by interpolating between the 
 vertices. The former looks much better for textured scenes, and slightly 
-better if simple opaque textures are used.  Gourad shading is the faster of 
+better if simple opaque textures are used.  Gouraud shading is the faster of 
 the two techniques.  
 
 The scan conversion process does not by default provide support for: shadows, 
@@ -1530,7 +1531,7 @@ Valid values for type and their meaning are:
    2 - A polyline between each of the control points
    3 - A closed polyline (last control point is automatically connected
        to the first).
-   4 - A cubic spline with the derivitives defined for the endpoints.
+   4 - A cubic spline with the derivatives defined for the endpoints.
        The syntax is:
 
          spline(4, t, [d0, v0, v1, ..., vn, dn], [p0, p1, ..., pn])
@@ -2940,7 +2941,7 @@ or, for automated smoothing:
     smooth_cheight_field "filename"
     smooth_cheight_field "filename", scale, base_radius
 
-2.3.2.9.4.1 Implicit Cylindrical Height Fields
+2.3.2.9.4.2 Implicit Cylindrical Height Fields
 
 
     cheight_fn ures, vres, exper
@@ -2951,7 +2952,7 @@ or, for automated smoothing:
     smooth_cheight_fn ures, vres, exper
     smooth_cheight_fn ures, vres, exper, scale, base_radius
 
-Like spherical height fields, the cylindircal height fields are defined in 
+Like spherical height fields, the cylindrical height fields are defined in 
 terms of the variables u and v.  For example, in the example below, the 
 function is a set of ripples that are placed onto the surface of a cylinder 
 (see chtst7.pi in the data archives).  The resolution of the height field is 
@@ -3786,7 +3787,7 @@ This is necessary for some particle systems to behave correctly.
 Sample files: part1.pi, part2.pi, part3.pi, part6.pi
 
 
-2.3.5 Finding bounds of objects
+2.3.6 Finding bounds of objects
 
 It is possible to have Polyray figure out the bounds of an object for use in 
 later operations.  For example, you may have a glyph object and you want to 
@@ -5163,7 +5164,7 @@ placed.
                                                                            83
 
 Comments follow the standard C/C++ formats.  Multiple line comments are 
-enclosed by /* ... */ and single line comments are preceeded by //.
+enclosed by /* ... */ and single line comments are preceded by //.
 
 Single line comments are allowed and have the following format:
 
@@ -5308,7 +5309,7 @@ process another file.  The syntax is:
 
 Beware that trying to use #include ... will fail.
 
-Polyray searchs for include files in all directories that appear in the 
+Polyray searches for include files in all directories that appear in the 
 environment variable POLYRAY_PATH.  This is a big help if you want to keep 
 just a single copy of .inc files and want Polyray to go get them from a 
 specific directory without explicitly giving the path within the data file.  
@@ -5317,9 +5318,9 @@ specific directory without explicitly giving the path within the data file.
 For example, if you keep your normal colors and texture include files in
 c:\polyray\include, and keep a bunch of image files for mapping in the
 directory c:\images then you could set the path in your System Properties.
-Choose "Environment Variables". AUTOEXEC.BAT with:
+Choose "Environment Variables". And modify or add POLYRAY_PATH to be:
 
-   set POLYRAY_PATH=;c:\polyray\include;c:\images
+   ;c:\polyray\include;c:\images
 
 
 2.10 File flush
@@ -5371,7 +5372,7 @@ that no compression should be used on the output file.
 
 The default output format is an RLE compressed 24 bit color format.  This 
 format holds 8 bits for each of red, green, and blue.  If you don't have the 
-hardware to display 24 bit images (and aren’t planning to send them to someone 
+hardware to display 24 bit images (and aren't planning to send them to someone 
 that can), then you can output 16 bit image by using the command line flag -p 
 16 (or use 'pixelsize 16' in polyray.ini).
 
@@ -5381,7 +5382,7 @@ Input image files can be broadly divided into three categories: multichannel
 (e.g., 24 bit images with 8 bits per pixel), indexed color (e.g., 8 bit index 
 into a palette of 24 bit colors), and greyscale (8 or 16 bits per pixel).  How 
 the pixel and palette information is used depends on what the image is being 
-used for.  The relevent descriptions for input images are:
+used for.  The relevant descriptions for input images are:
 
    image maps       3.2.1 Image maps
    height fields    3.2.2 Depth map formats
@@ -5401,7 +5402,7 @@ planar_imagemap(image, vector [, rflag])
 
 The interpretation of an image as a depth map depends on the number of bytes 
 per pixel and the type of image file.  The next four sections describe how 
-these files are intrepreted based on pixel size (and then by image type).  
+these files are interpreted based on pixel size (and then by image type).  
 Since the use of an image file for storing depth information is not 
 standardized, these are unique to Polyray.  (Almost unique, I implemented 
 
