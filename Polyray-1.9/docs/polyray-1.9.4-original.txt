@@ -1078,8 +1078,8 @@ pixel in the S-Buffer (1 byte each for red, green, blue, and opacity).
 During scan conversion, the number of polygons used to cover the surface of a 
 primitive is controlled using the keywords u_steps, and v_steps (or combined 
 with uv_steps).  These two values control how many steps around and along the 
-surface of the object values are generated to create polygons (see section 
-2.3.1.1.6).  The higher the number of steps, the smoother the final 
+surface of the object values are generated to create polygons (see 
+section 2.3.1.1.6).  The higher the number of steps, the smoother the final 
 appearance.  Note however that if the object is very small then there is 
 little reason to use a fine mesh - hand tuning is sometimes required to get 
 the best balance between speed and appearance.
@@ -1093,10 +1093,8 @@ along the x-axis, the value of v_steps controls the number of slices along the
 y-axis, and the value of w_steps controls the number of slices along the z-
 axis.
 
-Note that running Polyray in a Windows DOS box is a way to increase the memory 
-available for performing scan conversion.  Polyray will take advantage of the 
-virtual memory capabilities of Windows, allowing for larger images to be 
-rendered.
+Polyray takes advantage of the virtual memory capabilities of Windows, allowing 
+for larger images to be rendered as opposed to the older versions.
 
 Also note that there are images that render slower in scan conversion and 
 wireframe that raytracing!  These are typically those files that contain large 
@@ -1125,8 +1123,8 @@ either case the edges are trimmed by any CSG operations.
 Instead of creating an image, it is possible to instruct Polyray to create a 
 file that contains depth information.  Each pixel in the resulting Targa will 
 contain the distance from the eye to the first surface that is hit.  The 
-format of the files is identical to the formats used by height fields (see 
-2.3.2.9.1).
+format of the files is identical to the formats used by height fields 
+(see 2.3.2.9.1).
 
 For example, to create a 24 bit depth file, the following command could be 
 used:
@@ -1136,7 +1134,7 @@ used:
 Alternatively you can also use 'image_format' plus 'pixelsize' statements 
 within the data file to tell Polyray to create a depth file with a specific 
 bits per pixel.  Both of these are modifiers to the viewpoint declaration (see 
-2.2).
+section 2.2).
 
 Polyray will disable any antialiasing when creating depth files (it is 
 inappropriate to average depths).
@@ -3406,8 +3404,8 @@ The file "skull.raw" contains around a thousand triangles, one per line.
 
 If an angle follows the raw file name, then all triangles that are next to 
 each other and that form an angle less than the smoothing angle will have 
-their normals averaged together.  The smoothing angle must be between 0 and 
-180.  At 0 there will be no smoothing and at 180 every normal will be 
+their normals averaged together.  The smoothing angle must be between 0 
+and 180.  At 0 there will be no smoothing and at 180 every normal will be 
 
                                                                            54
 smoothed. For example the following declaration will produce the skull with 
@@ -3695,9 +3693,9 @@ leave the corresponding space empty.
 
 The normal image format for a gridded object is either grayscale or color 
 mapped.  To determine which object will be used, the value of the pixel itself 
-in the grayscale image and the color index is used in the mapped image.  If a 
-16 bit image is used, then the second byte of the color is used.  If a 24 or 
-32 bit image is used, then the value of the red component is used.  This 
+in the grayscale image and the color index is used in the mapped image.  If 
+a 16 bit image is used, then the second byte of the color is used.  If a 24 
+or 32 bit image is used, then the value of the red component is used.  This 
 limits the # of objects for all images to 256.
 
 A color JPEG is treated the same as a 24 bit Targa (unlikely to be useful, due 
@@ -3867,7 +3865,7 @@ specified as a value from 0 -> 1.  The way the color and shading of surfaces
 is specified is described in the following sections.
 
 RGB colors are defined as either a three component vector, such as <0.6, 
-0.196078, 0.8>, or as one of the X11R3 named colors (which for the value given 
+ 0.196078, 0.8>, or as one of the X11R3 named colors (which for the value given 
 is DarkOrchid).  One of these days when I feel like typing and not thinking 
 (or if I find them on line), I'll put in the X11R4 colors.
 
@@ -4184,7 +4182,7 @@ texture.  In addition, a very flexible (although slower) functional texture is
 supported.  Individual textures can be combined in various ways to create new 
 ones.  Texture types that help to combine other textures include: layered 
 textures, indexed textures, and summed textures.  (See section 2.4.3.3 through 
-2.4.3.5).
+section 2.4.3.5).
 
 The general syntax of a texture is:
 
@@ -4913,8 +4911,8 @@ argument.  If this argument is left out, then the bump size is set to one.
 Note that negative bump values are allowed and cause the bumps to appear to 
 project the other way.
 
-A bump map starts by interpreting pixels as if they were depths (see section 
-3.2.2).  It then uses adjacent pixels to determine the slope (rate of change) 
+A bump map starts by interpreting pixels as if they were depths (see 
+section 3.2.2).  It then uses adjacent pixels to determine the slope (rate of change) 
 of depths at that point.  The rate of change along two different directions 
 then defines how the normal to 
 
@@ -5235,9 +5233,9 @@ Then the variable t is declared which will range from 0 to 1:
    
    define t frame / (total_frames - 1)
 
-Under some circumstances you will will want to have t go from 0 to just under 
-1.  This is particularly useful for a looping animation.  For example, if you 
-wanted to rotate an object through 360 degrees, and have the flic play 
+Under some circumstances you will will want to have t go from 0 to just 
+under 1.  This is particularly useful for a looping animation.  For example, 
+if you wanted to rotate an object through 360 degrees, and have the flic play 
 seamlessly, you could use the following declarations:
 
                                                                            84
@@ -5391,8 +5389,8 @@ that no compression should be used on the output file.
 The default output format is an RLE compressed 24 bit color format.  This 
 format holds 8 bits for each of red, green, and blue.  If you don't have the 
 hardware to display 24 bit images (and aren't planning to send them to someone 
-that can), then you can output 16 bit image by using the command line flag -p 
-16 (or use 'pixelsize 16' in polyray.ini).
+that can), then you can output 16 bit image by using the command line flag 
+-p 16 (or use 'pixelsize 16' in polyray.ini).
 
 3.2 Input image files
 
@@ -5472,8 +5470,8 @@ This format includes both 16-bit color images and 16 bit greyscale images.
 The red component defines the integer component of the height, the green 
 component holds the fractional part scaled by 255, the blue component is 
 ignored.  The entire value is offset by 128 to compensate for the unsigned 
-nature of the RGB  values.  As an example the values  r = 140, g = 37, and b = 
-0 would be translated to the height:
+nature of the RGB  values.  As an example the values  r = 140, g = 37, and 
+b = 0 would be translated to the height:
 
    (140 + 37 / 256) - 128 = 12.144
 
