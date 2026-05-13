@@ -21,14 +21,14 @@
 
 
 
-                             Polyray v1.9.2 beta 2
-                             Modified version by Dr Clyde Meli. Parts of code (c) 1996-2020 Dr Clyde Meli
-                  (c) 1991-1995 Alexander R. Enzmann
-                           30th January 2020 - xx Beta Release - Non-commercial/academic use only
+                             Polyray v1.9.4
+                             Modified version by Clyde Meli. Parts of code (c) 1996-2026 Clyde Meli
+                          (c) 1991-1995 Alexander R. Enzmann
+                           13th May 2026
                           All Rights Reserved
 
 1 INTRODUCTION & SHAREWARE INFORMATION.............................1
-1.1 Acknowledgments and Other Legal Stuff..........................2
+1.1 License, Acknowledgments and Other Legal Stuff.................2
 1.2 Useful tools...................................................2
 1.2.1 Animation Utilities..........................................3
 1.2.2 Modellers....................................................3
@@ -181,7 +181,7 @@ log.  The files associated with Polyray are distributed in four pieces: the
 executable, a collection of document files, a collection of sample data files, 
 and a few small utility programs.
 
-Version 1.5 to 1.8 of Polyray are Shareware. Further versions are modified 
+Version 1.5 to 1.8 of Polyray were Shareware. Further versions are modified 
 versions starting from the source code of 1.8 with bug fixes and alterations. 
 Please note that the new modified versions are not supported by the original 
 author, but I still encourage you to support the original author for his 
@@ -204,25 +204,27 @@ distributing updates, the mailing costs were getting prohibitive and net
 access is getting cheap.)  Note that all of the sample files in PLYDAT are 
 Public Domain, you may use them freely.
 
-It is assumed that you are familiar with files compressed with PKZIP (version 
-2.04 is required) and setting the PATH variable to make an executable visible 
-to DOS.  If you aren't, then get some help from someone who has used ZIP and 
-is familiar with configuring a DOS system.
+I have been updating Polyray especially for use at the University of Malta in
+the Applied Computer Graphics unit. Since version 1.9.4 which is a maintenance
+release, Polyray is now released as open source under the MIT License with the 
+blessing of the original author Alexander Enzmann. Allow me to express a 
+BIG Thank you.
+
 
 The data files are ASCII text, the output image file format supported is 
 Targa.  Input images (for texturing, height fields, etc.) may be: Targa (all 
 variants defined in the Truevision spec), PNG (all variants should work), or 
 JPEG (JFIF format).  The Targa format is supported by many image processing 
 programs so if you need to translate between Targa and something else it is 
-quite simple.  The utility CJPEG, which converts from Targa to JPEG has been 
-included in the utility archive.  Polyray is case sensitive, so the following 
+quite simple.  The utility CJPEG, which converts from Targa to JPEG, is not 
+included in the utility archive - indeed you can use any graphics program like
+Irfanview to convert graphics files. Polyray is case sensitive, so the following 
 ways of writing foo are all considered different: Foo, FOO, and foo.  For an 
-abbreviated list of Polyray's syntax, see the file quickref.txt."
+abbreviated list of Polyray's syntax, see the file quickref.txt.
 
-
-The executable requires a Windows machine, and a minimum of 2 Mbytes of RAM to run.
-Under Windows it will run in a DOS box.
-
+Polyray works in console mode under Windows. I am working on developing a new
+TUI which would be a practical modern interface. Work is ongoing on a newer
+version of Polyray written in C++ still compatible with existing scene files.
 
                                                                            2
 
@@ -235,15 +237,25 @@ Compuserve as: Alexander Enzmann 70323,2461
 Internet as:   xander@mitre.org
 
 
-1.1 Acknowledgments and Other Legal Stuff
+1.1 License, Acknowledgments and Other Legal Stuff
 
-There is no warranty, explicit or implied, of the suitability of this software 
-for any purpose.  This software is provided as is, and the user of this 
-software assumes the entire risk as to its quality, accuracy, and for any 
-damages resulting from the use of this software.
+MIT LICENSE
+  Copyright (C) 1993-1996, Alexander Enzmann, All rights reserved.
+  Copyright (C) 1999-2026, Clyde Meli, All rights reserved.
 
-No part of this package may be included as part of a commercial package 
-without explicit written permission.
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation
+files (the ÏSoftwareÓ), to deal in the Software without restriction, including without limitation the rights to use, copy,
+modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the 
+Software is furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the 
+Software.
+
+THE SOFTWARE IS PROVIDED ÏAS ISÓ, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE 
+WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR 
+COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR 
+OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
 
 This software is based in part on the work of the Independent JPEG Group.
 
