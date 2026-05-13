@@ -1049,7 +1049,7 @@ HeightRender(Viewpoint *eye, BinTree *Root, Object *obj)
 #if defined( __APPLE__ )
          Abort_Flag = 1;
 #else
-         Abort_Flag = getch();
+         Abort_Flag = _getch();
 #endif
          break;
          }
