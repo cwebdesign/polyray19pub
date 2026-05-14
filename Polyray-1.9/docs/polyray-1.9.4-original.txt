@@ -1,26 +1,4 @@
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
                              Polyray v1.9.4
                              Modified version by Clyde Meli. Parts of code (c) 1996-2026 Clyde Meli
                           (c) 1991-1995 Alexander R. Enzmann
@@ -325,6 +303,7 @@ afterwards can be converted into a Matroska mkv file with Mkvtoolnix.
 
 Other programs of note include: FFmpeg, Blender, ImageMagick, Meshlab, GIMP/Krita, 
 Davinci Resolve/Powerdirector (for video editing).
+
 1.2.2 Modellers
 
 There are a few really good Shareware modellers out there.  Each of them allow 
@@ -334,7 +313,7 @@ The modellers are:
 
    o Moray        (Lutz Kretzschmar)
    o GUM          (Alexander Van Der Sluijs)
-   o POV-CAD      (Alphonso Hermida)
+   o POVCAD       (Alphonso Hermida)
 
 Moray is a graphical modeller for both Polyray and POV-Ray.  Moray currently 
 supports a large number of Polyray primitives directly, and provides a means 
@@ -342,12 +321,12 @@ for user defined objects and textures within a final data file.  Recent
 versions have dropped support for Polyray.
 
 GUM, written by Alexander Van Der Sluijsis a graphical modeling program for 
-Windows.  It supports rendering with both Polyray and POV-Ray.  
+Windows.  It supports rendering with both Polyray and POV-Ray. It is now abandonware. 
 
-POV-CAD, written by Alfonso Hermida is a graphical modeling program with both 
-Windows and DOS versions.  POV-CAD allows you to quickly build models through 
+POVCAD, written by Alfonso Hermida is a graphical modeling program with both 
+Windows and DOS versions.  POVCAD allows you to quickly build models through 
 point and click in a wireframe environment.  Both Polyray and POV-Ray data 
-files can be generated.
+files can be generated. It is similarly abandonware.
 
 
 1.2.3 Miscellaneous Programs
