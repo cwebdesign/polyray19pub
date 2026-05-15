@@ -1,0 +1,21 @@
+viewpoint {
+   from <0,5,-14>
+   at <0,0,0>
+   up <0,1,0>
+   angle 45
+   resolution 160, 160
+   }
+
+background <0, 0, 0>
+light <-50,10, -5>
+light < 10,20, -10>
+
+include "..\colors.inc"
+include "..\texture.inc"
+
+object {
+   disc <0, 2, 0>, <0, 1, 0>, 3
+   rotate <-50, 10, 0>
+   blue_ripple 
+   }
+

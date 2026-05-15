@@ -1,0 +1,28 @@
+viewpoint {
+   from <0,10, -10>
+   at <0,0,0>
+   up <0,1,0>
+   angle 30
+   resolution 160, 160
+   }
+
+background <0, 0, 0>
+light <0, 10, 0>
+
+include "..\colors.inc"
+
+define basic_cone
+object { cone <2, 0, 0>, 0, <4, 0, 0>, 1 shiny_red }
+
+basic_cone
+basic_cone { rotate <0, 30, 0> }
+basic_cone { rotate <0, 60, 0> }
+basic_cone { rotate <0, 90, 0> }
+basic_cone { rotate <0,120, 0> }
+basic_cone { rotate <0,150, 0> }
+basic_cone { rotate <0,180, 0> }
+basic_cone { rotate <0,210, 0> }
+basic_cone { rotate <0,240, 0> }
+basic_cone { rotate <0,270, 0> }
+basic_cone { rotate <0,300, 0> }
+basic_cone { rotate <0,330, 0> }

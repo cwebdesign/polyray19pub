@@ -1,0 +1,20 @@
+viewpoint {
+   from <0,0,-10>
+   at <0,0,0>
+   up <0,1,0>
+   angle 30
+   resolution 160, 120
+   aspect 4/3
+   }
+
+background white
+light <-10,10, -10>
+light < 10,10, -10>
+
+include "..\colors.inc"
+
+object {
+   cylinder <0, -2, 0>, <0, 2, 0>, 2
+   shiny_red
+   }
+

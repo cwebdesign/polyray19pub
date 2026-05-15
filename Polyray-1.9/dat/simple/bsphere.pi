@@ -1,0 +1,35 @@
+// Generic Polyray input File
+// Polyray input file: Alexander Enzmann
+
+// Set up the camera
+viewpoint {
+   from <7,10,-10>
+   at <0,0,2>
+   up <0,1,0>
+   angle 45
+   hither 1
+   resolution 160, 160
+   }
+
+background sky_blue
+light 0.6 * white, <-10,10, -20>
+light 0.6 * white, < 10,10, -20>
+
+define shiny_red
+texture {
+   surface {
+      ambient red, 0.2
+      diffuse red, 0.8
+      specular white, 0.7
+      microfacet Reitz 10
+      }
+   }
+
+object { sphere <-2,-2, 0>, 1 shiny_red }
+object { sphere <-2,-2, 4>, 1 shiny_red }
+object { sphere <-2, 2, 0>, 1 shiny_red }
+object { sphere <-2, 2, 4>, 1 shiny_red }
+object { sphere < 2,-2, 0>, 1 shiny_red }
+object { sphere < 2,-2, 4>, 1 shiny_red }
+object { sphere < 2, 2, 0>, 1 shiny_red }
+object { sphere < 2, 2, 4>, 1 shiny_red }

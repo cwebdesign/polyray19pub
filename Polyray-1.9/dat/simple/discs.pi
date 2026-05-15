@@ -1,0 +1,31 @@
+//
+// CSG intersection of several discs (much better than using polynomial
+// planes)
+//
+viewpoint {
+   from <0,2,-8>
+   at <0,0,0>
+   up <0,1,0>
+   angle 25
+   resolution 160, 160
+   }
+
+background <0, 0, 0>
+light <-50,10, -5>
+light < 10,20, -10>
+
+include "..\colors.inc"
+include "..\texture.inc"
+
+object {
+     object { disc < 1, 0, 0>, < 1, 0, 0>, 2 }
+   * object { disc <-1, 0, 0>, <-1, 0, 0>, 2 }
+   * object { disc < 0, 1, 0>, < 0, 1, 0>, 2 }
+   * object { disc < 0,-1, 0>, < 0,-1, 0>, 2 }
+   * object { disc < 0, 0, 1>, < 0, 0, 1>, 2 }
+   * object { disc < 0, 0,-1>, < 0, 0,-1>, 2 }
+   bounding_box <-1, -1, -1>, <1, 1, 1>
+   blue_ripple { scale <0.3, 0.3, 0.3> }
+   rotate <-30, 30, 0>
+   }
+

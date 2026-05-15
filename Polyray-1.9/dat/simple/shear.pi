@@ -1,0 +1,20 @@
+// Generic Polyray input File
+// Polyray input file: Alexander Enzmann
+
+// Set up the camera
+viewpoint {
+   from <0,0,-8>
+   at <0,0,0>
+   up <0,1,0>
+   angle 45
+   hither 1
+   resolution 160, 160
+   }
+
+background skyblue
+light <-10,3, -20>
+
+object {
+   sphere <0, 0, 0>, 2
+   shear 0.5, 0, 0, 0, 0, 0
+   }

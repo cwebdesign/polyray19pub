@@ -1,0 +1,32 @@
+// File demonstrating boxes
+// Polyray input file: Alexander Enzmann
+
+// Set up the camera
+viewpoint {
+   from <0,7,-10>
+   at <0,0,0>
+   up <0,1,0>
+   angle 45
+   resolution 160, 120
+   aspect 4/3
+   }
+
+// Get various surface finishes
+background white
+light <1, 1, 1>, <-10,10, -5>
+// light <1, 1, 1>, <30, 5, 0>
+
+// Set up background color & lights
+include "..\colors.inc"
+
+// Define a short pyramid made out of progressively smaller boxes
+define pyramid
+object {
+     object { box <-1, 3, -1>, <1, 4, 1> }
+   + object { box <-2, 2, -2>, <2, 3, 2> }
+   + object { box <-3, 1, -3>, <3, 2, 3> }
+   + object { box <-4, 0, -4>, <4, 1, 4> }
+   matte_blue
+   }
+
+pyramid { rotate <0, 30, 0> }

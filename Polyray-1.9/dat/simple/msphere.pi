@@ -1,0 +1,32 @@
+// Set up the camera
+viewpoint {
+   from <0,0,-8>
+   at <0,0,0>
+   up <0,1,0>
+   angle 35
+   resolution 256, 256
+   }
+
+define marble_fn1 sawtooth(x + 3 * fnoise(P/2, <2.0, 0.7, 8>))
+define marble_fn2 sawtooth(x + 3 * noise(P, <2.0, 0.7, 8>))
+define white_marble_map
+   color_map([0, 0.8, white, 0.5*white]
+	     [0.8, 1, 0.5*white, 0.2*white])
+define white_marble
+   texture {
+      special surface {
+	 color white_marble_map[marble_fn2]
+	 ambient 0.1
+	 diffuse 0.8
+	 specular white, 0.1
+	 microfacet Cook 5
+	 }
+      }
+
+background white
+light <-10,3, -20>
+
+object {
+   sphere <0, 0, 0>, 2
+   white_marble
+   }

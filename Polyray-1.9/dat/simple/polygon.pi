@@ -1,0 +1,24 @@
+viewpoint {
+   from <0,10,-15>
+   at <0,1.5,0>
+   up <0,1,0>
+   angle 30
+   resolution 160, 120
+   aspect 4/3
+   }
+
+background white
+light <-10,10, -10>
+light < 10,10, -10>
+
+include "..\colors.inc"
+
+object {
+   polygon 5, <-5, 0, -2>, <-5, 0, 5>, <0, 0, 2>,
+	      <5, 0, 5>, <5, 0, -2>
+   texture {
+      checker shiny_red, shiny_blue
+      scale <2, 1, 2>
+      }
+   }
+
