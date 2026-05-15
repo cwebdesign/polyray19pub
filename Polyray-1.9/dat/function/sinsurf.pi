@@ -1,0 +1,31 @@
+//
+// the value theta_offset is used in animations to make
+// the surface move
+define theta_offset radians(frame * 12)
+
+// Set up the camera
+viewpoint {
+   from <0,5,-5>
+   at <0,0,0>
+   up <0,1,0>
+   angle 30
+   resolution 160, 160
+   }
+
+define white <1,1,1>
+define DarkSlateGray <0.184314, 0.309804, 0.309804>
+define red <1, 0, 0>
+define SkyBlue <0.196078, 0.6, 0.8>
+
+// Set up background color & lights
+background SkyBlue
+light <10,10,-10>
+include "..\colors.inc"
+
+// Define a sinusoidal surface
+object {
+   function y - 0.25 * sin(18.85 * x * z + theta_offset)
+   shiny_red
+   bounding_box <-2, -0.5, -2>, <2, 0.5, 2>
+   uv_steps 64, 64
+   }

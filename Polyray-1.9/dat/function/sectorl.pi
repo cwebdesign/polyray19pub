@@ -1,0 +1,35 @@
+// Set up the camera
+viewpoint {
+   from <0,2,-5>
+   at <0,0,0>
+   up <0,1,0>
+   angle 30
+   resolution 160, 160
+   }
+
+// Set up background color & lights
+background SkyBlue
+light <10, 20, -30>
+include "..\colors.inc"
+
+// Conversion from polar to rectangular (for a left-handed
+// coordinate system):
+//
+//  r     = sqrt(x^2 + y^2 + z^2),
+//  theta = atan(y/x),
+//  phi   = atan(sqrt(x^2 + y^2)/z)
+//
+// Surface is:
+//   r = 1 + c * LegendreP(3,0,cos(phi))*cos(n*theta)
+//   r = 1 + c * 2.5 * cos(phi)^3 - 1.5 * cos(phi)
+// For this surface, use c = 0.2
+
+// Define a zonal harmonic surface
+define theta atan(y/x)
+define phi atan(sqrt(x^2 + z^2)/y)
+define r sqrt(x^2 + y^2 + z^2)
+object {
+   function r - (1 + (0.5 * cos(phi)^3 - 0.3 * cos(phi)) * cos(3 * theta))
+   shiny_red
+   bounding_box <-2, -2, -2>, <2, 2, 2>
+   }

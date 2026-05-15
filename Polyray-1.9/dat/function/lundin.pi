@@ -1,0 +1,27 @@
+// start_frame  0
+// end_frame   40
+
+// Set up the camera
+viewpoint {
+   from <10,0,0>
+   at <0,0,0>
+   up <0,1,0>
+   angle 30
+   resolution 256, 256
+   }
+
+// Set up background color & lights
+background SkyBlue
+light <10,10,-10>
+include "..\colors.inc"
+
+define d 0.5 * (1 - frame / end_frame)
+define k 1.0
+
+// Define a Lundin surface
+object {
+   function (x - d * sin(k / z))^2 + (y - d * cos(k / z))^2 + z^2 - 1
+   bounding_box <-(1+d), -(1+d),-2>, <(1+d), (1+d), 2>
+   uv_steps 256, 256
+   shiny_red
+   }

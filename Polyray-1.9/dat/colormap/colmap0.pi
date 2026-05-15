@@ -1,0 +1,131 @@
+start_frame 0
+end_frame 8
+outfile cmap
+
+viewpoint {
+   from <0,5,-12>
+   at <0,0,0>
+   up <0,1,0>
+   angle 25
+   resolution 320, 240
+   aspect 4/3
+   }
+
+spot_light white, <10,10, -10>, <3,0,0>, 3, 25, 30
+
+include "colors.inc"
+
+define map_fn1 ramp(y)
+define test_map1 color_map([0, 0.3, white, white]
+                           [0.3, 1, white, red])
+define test_map2 color_map([0, 0.3, white, 1, white, 1]
+                           [0.3, 1, white, 1, red, 1])
+define test_map3 color_map([0, 0.3, white, 0, white, 0]
+                           [0.3, 1, white, 0, red, 1])
+
+define default_surface1
+   surface {
+      ambient 0.1
+      diffuse 0.4
+      specular white, 0.2
+      }
+
+define default_surface2
+   surface {
+      ambient 0
+      diffuse 0
+      specular white, 0
+      }
+
+if (frame == 0)
+   // Opaque, white and red rings
+   // Solid shadow
+   define test_surface1
+      default_surface1 {
+         color test_map1[map_fn1]
+         }
+
+else if (frame == 1)
+   // Clear and transparent red rings
+   // Too much brightness from addition of diffuse & transmitted
+   // Colored shadows
+   define test_surface1
+      default_surface1 {
+         color test_map1[map_fn1]
+         transmission 1, 1
+         }
+
+else if (frame == 2)
+   // Clear and transparent red rings
+   // Colored shadows
+   define test_surface1
+      default_surface2 {
+         color test_map1[map_fn1]
+         transmission 1, 1
+         }
+
+else if (frame == 3)
+   // 
+   define test_surface1
+      default_surface1 {
+         color test_map2[map_fn1]
+         }
+
+else if (frame == 4)
+   // Same as frame 2, but here the transmission scale
+   // comes from the color map
+   define test_surface1
+      default_surface2 {
+         color test_map2[map_fn1]
+         }
+
+else if (frame == 5)
+   // This gives red transparent plus opaque white
+   define test_surface1
+      default_surface1 {
+         color test_map3[map_fn1]
+         }
+
+else if (frame == 6)
+   // This gives opaque black and transparent red rings
+   define test_surface1
+      default_surface2 {
+         color test_map3[map_fn1]
+         }
+
+else if (frame == 7)
+   // Works just like a POV-Ray texture, diffuse and specular
+   // are diminished by the amount of opacity
+   define test_surface1
+      surface {
+         color test_map3[map_fn1]
+	 ambient 0.1 * (1 - test_map3[map_fn1][3])
+	 diffuse 0.4 * (1 - test_map3[map_fn1][3])
+	 specular 0.2 * (1 - test_map3[map_fn1][3])
+         }
+
+else if (frame == 8)
+   // 
+   define test_surface1
+      surface {
+         color test_map3[map_fn1]
+	 ambient 0.1 * (1 - test_map3[map_fn1][3])
+	 diffuse 0.4 * (1 - test_map3[map_fn1][3])
+	 specular coral, 0.2 * (1 - test_map3[map_fn1][3])
+	 microfacet Cook 4
+         }
+
+// Create a sphere with a checker texture
+object {
+   sphere <1.5, 0, -0.5>, 2
+   texture { special test_surface1 }
+   }
+
+object {
+   box <-10, -3, -5>, <10, -2.01, 5>
+   texture { checker matte_white, matte_green }
+   }
+object {
+   box <-10, -3,  5>, <10,  5, 5.01>
+   texture { checker matte_white, matte_green }
+   }

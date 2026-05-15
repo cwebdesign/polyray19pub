@@ -1,0 +1,27 @@
+// Sample transcendental surface.  This is a basic superquadric shape (a pinchy)
+// There seems to be a problem with the shading, and there are severe holes
+// at the edges.
+// Polyray input file - Alexander Enzmann
+
+// Set up the camera
+viewpoint {
+   from <0, 5, -5>
+   at <0,0,0>
+   up <0,1,0>
+   angle 15
+   resolution 160, 160
+   }
+
+// Set up background color & lights
+background white
+light <10,10,-10>
+include "..\colors.inc"
+
+// Define a superquadric surface
+object {
+   function |x|^0.75 + |y|^0.74 + |z|^0.75 - 1
+   shiny_red
+   bounding_box <-1, -1, -1>, <1, 1, 1>
+   uv_steps 128, 128
+   rotate <0, 30, 0>
+   }

@@ -1,0 +1,27 @@
+// Set up the camera
+viewpoint {
+   from <0,10,-6>
+   at <0,0,0>
+   up <0,1,0>
+   angle 45
+   resolution 160, 160
+   }
+
+// Set up background color & lights
+background SkyBlue
+light <10,10,-10>
+include "..\colors.inc"
+
+define a_const 1.0
+define b_const 2.0
+define c_const 3.0
+define two_pi_a 2.0 * 3.14159265358 * a_const
+
+// Define a diminishing cosine surface (sombrero)
+object {
+   function y - c_const * cos(two_pi_a * sqrt(x^2 + z^2)) *
+                          exp(-b_const * sqrt(x^2 + z^2))
+   shiny_red
+   bounding_box <-4, -2, -4>, <4, 2, 4>
+   uv_steps 64, 64
+   }

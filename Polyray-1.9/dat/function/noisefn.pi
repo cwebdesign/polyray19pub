@@ -1,0 +1,29 @@
+// Generic Polyray input File
+// Polyray input file: Alexander Enzmann
+
+// Set up the camera
+viewpoint {
+   from <0, 5, -10>
+   at   <0, 0,  0>
+   up   <0, 1,  0>
+   angle 25
+   resolution 320, 240
+   aspect 4/3
+   }
+
+include "..\colors.inc"
+
+background white
+light <10, 10, -20>
+
+// Define a noise surface
+object {
+   object {
+      function noise(3*P) - 0.5
+      uv_steps 64, 64, 64
+      shiny_red
+      bounding_box <-2, -2, -2>, <2, 2, 2>
+      }
+   & object { sphere <0, 0, 0>, 2 }
+   rotate <-10, 20, 0>
+   }

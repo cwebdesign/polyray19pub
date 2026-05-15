@@ -1,0 +1,43 @@
+// Sample transcendental surface.  This is a zonal harmonic.  This file shows
+// a way that a surface that is defined in spherical variables can be
+// represented in cartesian coordinates and ray-traced.  The surface itself
+// is a sphere modified by an associated Legendre polynomial.
+// Polyray input file - Alexander Enzmann
+//
+// Note: it really doesn't seem to be quite right yet.
+//
+
+// Set up the camera
+viewpoint {
+   from <0,2,-5>
+   at <0,0,0>
+   up <0,1,0>
+   angle 30
+   resolution 160, 160
+   }
+
+// Set up background color & lights
+background SkyBlue
+light <10, 20, -30>
+include "..\colors.inc"
+
+// Conversion from polar to rectangular (for a left-handed
+// coordinate system):
+//
+//  r     = sqrt(x^2 + y^2 + z^2),
+//  theta = atan(y/x),
+//  phi   = atan(sqrt(x^2 + y^2)/z)
+//
+// Surface is:
+//   r = 1 + c * LegendreP(3,0,cos(phi))
+//   r = 1 + c * 2.5 * cos(phi)^3 - 1.5 * cos(phi)
+// For this surface, use c = 0.2
+
+// Define a zonal harmonic surface
+define phi atan(sqrt(x^2 + z^2)/y)
+define r sqrt(x^2 + y^2 + z^2)
+object {
+   function r - (1 + 0.5 * cos(phi)^3 - 0.3 * cos(phi))
+   shiny_red
+   bounding_box <-2, -2, -2>, <2, 2, 2>
+   }

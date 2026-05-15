@@ -1,0 +1,70 @@
+start_frame 160
+end_frame 160
+
+viewpoint {  //  Camera StdCam
+  from <-10.195, -15.332, 10.762>
+  at   <0.000, 0.000, 0.000>
+  up   <0.000, 0.000, 1.000>
+  angle 30.0*(3/4)
+  aspect -4/3
+  resolution 400, 300
+  // resolution 100, 75
+}
+
+light white, <0.376, -6.266, 10.316>
+
+define disc_rad frame / 20
+define edge_dist min(5, max(0, 5 + (|P| - disc_rad))) / 5
+// define edge_dist ramp(bias(max(1, min(0, ramp(|P| - disc_rad))), 0.6))
+// define edge_dist ramp(bias(ramp(|P| / disc_rad), 0.6))
+
+define cmap1 color_map(
+         [ 0.000, 0.795,  <1.000, 1.000, 1.000>, 1.000,<1.000, 1.000, 1.000>, 1.000 ]
+         [ 0.795, 0.939,  <1.000, 1.000, 1.000>, 1.000,<0.703, 0.797, 1.000>, 0.000 ]
+         [ 0.939, 1.000,  <0.703, 0.797, 1.000>,<0.703, 0.797, 1.000> ] )
+define cmap2 color_map(
+         [ 0.000, 0.691,  <1.000, 1.000, 1.000>, 1.000,<1.000, 1.000, 1.000>, 1.000 ]
+         [ 0.691, 0.849,  <1.000, 1.000, 1.000>, 1.000,<0.534, 0.685, 1.000>, 0.437 ]
+         [ 0.849, 0.867,  <0.534, 0.685, 1.000>, 0.437,<1.000, 1.000, 1.000>, 1.000 ]
+         [ 0.867, 1.000,  <1.000, 1.000, 1.000>, 1.000,<0.620, 0.740, 1.000>, 0.000 ])
+
+define Texture01
+texture {
+  layered
+   texture { // Texture01L2
+     special surface {
+       color cmap1[edge_dist]
+       position P + 8 * 0.100 * 1.9 * (dnoise(W,<2,0.5000,6>) - white/2)
+     }
+   },
+   texture { // Texture01L1
+     special surface {
+       color cmap2[edge_dist]
+       position P + 8 * 0.300 * 1.9 * (dnoise(W,<4,0.5,6>) - white/2)
+       diffuse 0.8 * opacity
+     }
+   }
+}
+
+define Texture02 
+texture { // Texture02
+   surface  {
+     color <1.000, 1.000, 0.000>
+     ambient  0.3
+     diffuse  0.3
+   }       
+}
+
+// ********  O B J E C T S *******
+object {
+  disc <0.0, 0.0, 0.0>, <0.0, 0.0, 1.0>, disc_rad
+  Texture01
+  translate <0.000000, 0.000000, 1.500000>
+}
+
+// Disc001
+object {
+  disc <0.0, 0.0, 0.0>, <0.0, 0.0, 1.0>, 100
+  Texture02
+}
+

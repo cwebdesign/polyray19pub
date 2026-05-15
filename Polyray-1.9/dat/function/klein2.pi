@@ -1,0 +1,25 @@
+// start_frame 0
+// end_frame 59
+
+viewpoint {
+   from <0,-5,-6>
+   at <0,0,0>
+   up <0,1,0>
+   angle 45
+   resolution 256, 256
+   }
+light orange, <-10, 30, -20>
+light turquoise, < 10,-30, -20>
+
+define pi 3.14159265358979
+define sqrt_2 sqrt(2)
+
+define klein_x cos(u)*(cos(u/2)*(sqrt_2+cos(v))+(sin(u/2)*sin(v)*cos(v)))
+define klein_y sin(u)*(cos(u/2)*(sqrt_2+cos(v))+(sin(u/2)*sin(v)*cos(v)))
+define klein_z -1*sin(u/2)*(sqrt_2+cos(v))+cos(u/2)*sin(v)*cos(v)
+object {
+   parametric <klein_x, klein_y, klein_z>
+   uv_bounds 0, 4*pi, 0, 2*pi
+   uv_steps 128, 32
+   rotate <6*frame, 6*frame, 0>
+   }
