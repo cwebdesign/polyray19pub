@@ -18,8 +18,8 @@ released under the MIT License at the request of the original author.
 
 ##  Repository Structure
 Polyray-1.9/        # Updated source code (with MIT headers)  
-- docs/             # Manuals, historical notes, technical references
-- examples/         # Sample scenes and materials
+- manual/           # Updated Manual, historical notes, technical references
+- examples/         # Sample scenes and materials (TODO)
 - tools/            # Utilities, converters, helper scripts (TODO)
 CREDITS.md        # Attribution and acknowledgements
 LICENSE           # MIT License
