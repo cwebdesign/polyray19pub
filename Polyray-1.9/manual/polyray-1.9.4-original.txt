@@ -5545,7 +5545,23 @@ overlapping transparent objects. Works fine if the ior is 1.0, or if there is
 only 1 object intersected by the ray.  The cure is to use clipping or u/v 
 bounds to remove the overlapping pieces.
 
+Currently eval_div in eval.c is performing a calculation, then discarding it
+by working out the cross product. This is clearly wrong. Documentation does 
+not even mention a vector divided by another vector. This is fixed in the 
+newer C++ version.
+
+There is an overflow issue in the Bezier Control Points. Fixed in the newer 
+C++ version.
+
+
 5 Revision History
+Version 1.9.4
+"Bella" Build (named after Malta's Eurovision 2026 Entry)
+Released 16th May 2026
+Switched to gcc 16.1.0 on MSYS2.
+Various fixes to make it more secure.
+This is the first open source version of Polyray with the blessing of the original developer.
+
 Version 1.9.3
 "Travel Malta" Build
 Released 12th January 2023

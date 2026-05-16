@@ -1,0 +1,13 @@
+# Polyray Manual
+
+Polyray is a raytracing program for producing scenes of 3D shapes and surfaces.
+
+This manual documents the modified Polyray 1.9.x branch maintained by Clyde Meli, based on the original Polyray by Alexander R. Enzmann.
+
+## Start here
+
+- [Introduction](1_introduction.md)
+
+## About this manual
+
+This documentation modernises the original fixed-width Polyray manual while preserving historical information where useful.
