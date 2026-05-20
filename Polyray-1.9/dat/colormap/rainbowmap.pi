@@ -1,0 +1,37 @@
+// rainbow_test.pi
+include "rainbow.inc"
+
+define map_fn ramp(y)
+
+// Assumes makemap was run like:
+// makemap rainbow.dat rainbow_map >> rainbow.inc
+
+viewpoint {
+  from <0, 1.2, -7>
+  at <0, 0, 0>
+  up <0, 1, 0>
+  angle 35
+  resolution 640, 480
+}
+
+background <0.02, 0.02, 0.04>
+
+light <4, 6, -6>
+
+define default_surface1 
+  surface {  
+      ambient 0.25
+      diffuse 0.75
+      specular white, 0.25
+      microfacet Cook 12
+   }
+
+define rainbow_surface 
+  default_surface1 {
+    color rainbow[map_fn]
+}
+
+object {
+  sphere <0, 0, 0>, 2
+  texture { special rainbow_surface }
+}
