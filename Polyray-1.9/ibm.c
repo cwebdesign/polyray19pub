@@ -34,7 +34,7 @@ int Dither_Flag = 0;         /* Use ordered dither on video display */
 int Display_x0 = -1, Display_y0 = -1;
 int Display_xl = -1, Display_yl = -1;
 
-#if (defined(unix) || defined(linux) ) && !defined(MINGW)
+#if (defined(__unix__) || defined(linux) ) && !defined(MINGW)
 /* UNIX interface */
 
 
@@ -69,7 +69,7 @@ display_close(int wait_flag)
     printf("\nFinished. Click into the window to continue\n");
     //SpecialStatus("Done");
     //getch();
-    pause();
+    polyray_pause();
   }
   //DeinitDisplay();
   return;
