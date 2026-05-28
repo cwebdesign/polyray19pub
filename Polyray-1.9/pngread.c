@@ -4,7 +4,6 @@
 #include "io.h"
 #include "jpeg.h"
 
-//todo:replace this png code to use a modern library
 #define LITTLE_ENDIAN
 
 #include "pngread.h"
@@ -818,14 +817,16 @@ unsigned hufts;         /* track memory usage */
 
 
 static int
-huft_build(b, n, s, d, e, t, m)
-unsigned *b;            /* code lengths in bits (all assumed <= BMAX) */
-unsigned n;             /* number of codes (assumed <= N_MAX) */
-unsigned s;             /* number of simple-valued codes (0..s-1) */
-ush *d;                 /* list of base values for non-simple codes */
-ush *e;                 /* list of extra bits for non-simple codes */
-struct huft **t;        /* result: starting table */
-int *m;                 /* maximum lookup bits, returns actual */
+huft_build(unsigned *b, unsigned n, unsigned s, ush *d, ush *e,
+  struct huft **t, int *m)
+/*
+unsigned *b;             code lengths in bits (all assumed <= BMAX)
+unsigned n;              number of codes (assumed <= N_MAX)
+unsigned s;              number of simple-valued codes (0..s-1)
+ush *d;                  list of base values for non-simple codes
+ush *e;                  list of extra bits for non-simple codes
+struct huft **t;         result: starting table
+int *m;                  maximum lookup bits, returns actual */
 /* Given a list of code lengths and a maximum table size, make a set of
    tables to decode that set of codes.  Return zero on success, one if
    the given code set is incomplete (the tables are still built in this
@@ -1019,8 +1020,8 @@ int *m;                 /* maximum lookup bits, returns actual */
 
 
 
-static int huft_free(t)
-struct huft *t;         /* table to free */
+static int huft_free(struct huft *t)
+/*struct huft *t;          table to free */
 /* Free the malloc'ed tables built by huft_build(), which makes a linked
    list of the tables it made, with the links in a dummy first entry of
    each table. */
@@ -1047,9 +1048,9 @@ struct huft *t;         /* table to free */
 
 #else
 
-int inflate_codes(tl, td, bl, bd)
-struct huft *tl, *td;   /* literal/length and distance decoder tables */
-int bl, bd;             /* number of bits decoded by tl[] and td[] */
+int inflate_codes(
+struct huft *tl, struct huft *td,   /* literal/length and distance decoder tables */
+int bl, int bd)             /* number of bits decoded by tl[] and td[] */
 /* inflate (decompress) the codes in a deflated (compressed) block.
    Return an error code or zero if it all goes ok. */
 {
@@ -1428,8 +1429,8 @@ int inflate_dynamic()
 
 
 
-int inflate_block(e)
-int *e;                 /* last block flag */
+int inflate_block(int *e)
+/*int *e;                  last block flag */
 /* decompress an inflated block */
 {
   unsigned t;           /* block type */
