@@ -1,5 +1,10 @@
 # 5 Revision History
 
+### Version 2.0 
+"C++" Build 
+Relesed ..
+Various changes to the code now compiling under C++, modernisation and refactoring
+When evaluating Sturm, we first try guarded, bracket-saf Newton-Raphson
 
 ### Version 1.9.4
 "Bella" Build (named after Malta's Eurovision 2026 Entry)
