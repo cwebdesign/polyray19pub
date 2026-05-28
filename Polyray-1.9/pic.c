@@ -520,7 +520,9 @@ TGAOpen(char *filename, Viewpoint *eye, int resume, int cflag,
    tmp->filename = (char *)polyray_malloc(strlen(filename)+1);
    if (tmp->filename == NULL)
       error("Failed to allocate picture data\n");
-   strcpy(tmp->filename, filename);
+   //strcpy(tmp->filename, filename);
+   strncpy(tmp->filename,filename,sizeof(tmp->filename)-1);//leave room for null cm160519
+   tmp->filename[sizeof(tmp->filename)-1]='\0';//cm160519
 
    tmp->line_flags = polyray_malloc(tmp->y * sizeof(unsigned char));
    for (i=0;i<tmp->y;i++)
