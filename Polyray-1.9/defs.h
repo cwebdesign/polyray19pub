@@ -200,12 +200,13 @@ inline int _kbhit() {
 #define ABS(x) ((x)<0?(-(x)):(x))
 #define equal(x, y) (fabs((x)-(y)) < EPSILON ? 1 : 0)
 
-/* not used yet! not worth it..... better some processor optimizations..
-extern unsigned short sqrtablevalues[16]; -- in speedup.s
-
-for integers only
-#define fastsqr(x) ((x)<=16 ? (sqrtablevalues[(x)-1]) : (x)*(x))
-*/
+#ifndef USE_ANTCC
+inline bool isfltequal(double x, double y) {
+  int ix=(int)(x*100);
+  int iy=(int)(y*100);
+  return (ix==iy);
+}
+#endif
 
 typedef double Flt;
 typedef long double LFlt;
