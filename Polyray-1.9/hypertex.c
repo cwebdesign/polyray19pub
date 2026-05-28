@@ -361,9 +361,7 @@ MakeHypertexture(Object *object, NODE_PTR data)
    return object;
 }
 
-void
-HypertextureDelete(object)
-   Object *object;
+void HypertextureDelete(Object *object)
 {
    HypertextureData *FnData = (HypertextureData *)object->o_data;
 
