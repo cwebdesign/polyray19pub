@@ -58,6 +58,14 @@ OBJS = $(O1) $(O2) $(O3) $(O4) $(O5) $(O6) $(O7) $(O8) $(O9) $(O10) $(O11) $(O12
 #$(NAME).exe : $(OBJS)
 #	$(LINKER) @watcom.lnk
 
+#USE_ANTCC = 1
+ifeq ($(USE_ANTCC), 1)
+CC = antcc -DUSE_ANTCC
+CPP = g++
+CFLAGS = -Wall -c -DDEBUG -DDEBUG_FN_CALLS -DTESTING
+LDFLAGS = -lm -g
+else
+
 #
 # Use these definitions with GNU C++
 #
@@ -71,8 +79,8 @@ CFLAGS  =-Wall -c -O3
 #-pipe
 BIN_FLG =
 #public compile no debugging
-#LFLAGS = -lm
-LFLAGS	=-lssp 
+#LDFLAGS = -lm
+LDFLAGS	=-lssp 
 #-g
 #-pg -g
 # public compile, no debugging
@@ -86,8 +94,11 @@ OPT	= -lssp -O3 -march=native -fstack-protector
 GOPT	= 
 #-funroll-loops
 OPTFLG	=$(OPT) $(GOPT)
+
+endif
+
 $(NAME) : $(OBJS)
-	$(CC) -o polyray.exe $(OBJS) $(X11LIB) $(LFLAGS)
+	$(CC) -o polyray.exe $(OBJS) $(X11LIB) $(LDFLAGS)
 #
 #$(NAME).exe : $(OBJS)
 #	$(CC) -o plygcc @gcc.lnk $(LFLAGS)
