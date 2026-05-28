@@ -372,7 +372,7 @@ reset_data(void)
 }
 
 static void
-read_defaults(int argc, char **argv, char *outfilename,
+read_defaults(int argc, char **argv, char *outfilename, size_t outfilename_size,
               Viewpoint *eye, int *resume,
               int *wait, int *Start_Line, int *End_Line)
 {
@@ -383,7 +383,8 @@ read_defaults(int argc, char **argv, char *outfilename,
    /* Set defaults for the output file */
    if (!filebaseflag)
       strcpy(outfilebase, "out");
-   strcpy(outfilename, "out.tga");
+   strncpy(outfilename, "out.tga", outfilename_size - 1);
+   outfilename[outfilename_size - 1] = '\0';
    _optind = 2; /* Reset the index into parent argv vector */
 
    /* Loop through the command line options */
@@ -430,7 +431,8 @@ read_defaults(int argc, char **argv, char *outfilename,
          break;
       case 'G':
          outformat = OUT_RAWPPM;
-         strcpy(outfilename, "out.ppm");
+         strncpy(outfilename, "out.ppm", outfilename_size - 1);
+         outfilename[outfilename_size - 1] = '\0';
          break;
 
       case 'M':
@@ -440,8 +442,8 @@ read_defaults(int argc, char **argv, char *outfilename,
          File_Generation_Flag = 0;
          break;
       case 'o':
-	      strncpy(outfilename, optarg1,sizeof(outfilename)-1);
-         outfilename[sizeof(outfilename)-1] = '\0';
+         strncpy(outfilename, optarg1, outfilename_size - 1);
+         outfilename[outfilename_size - 1] = '\0';
          break;
       case 'O':
          Optimizer = atoi(optarg1);
@@ -575,7 +577,8 @@ set_line_boundaries(Viewpoint *eye, int *Start_Line, int *End_Line)
 
 static void
 render_scene(int argc, char **argv, Viewpoint *eye, char *infilename,
-             char *outfilename, char *outfilebase, int resume,
+             char *outfilename, size_t outfilename_size,
+             char *outfilebase, int resume,
              time_t *atime, int *wait, int Start_Line, int End_Line)
 {
    Pic *pic;
@@ -603,7 +606,7 @@ printf("parsed");
 
       /* Use command line params to override values that appeared
          in either the ini file or the data file */
-      read_defaults(argc, argv, outfilename, eye, &resume,
+      read_defaults(argc, argv, outfilename, outfilename_size, eye, &resume,
                     wait, &Start_Line, &End_Line);
 
       /* If the amount of RAM to use hasn't been specified, then
@@ -1059,9 +1062,10 @@ int main(int _argc, char *argv[])
    Initialize_Symtab();
    Read_Initialization_Data();
    //printf("argc=%d\n", argc);
-   read_defaults(argc, argv, outfilename, &Eye, &resume,
+   read_defaults(argc, argv, outfilename, sizeof(outfilename), &Eye, &resume,
                  &wait, &Start_Line, &End_Line);
-   render_scene(argc, argv, &Eye, infilename, outfilename, outfilebase,
+   render_scene(argc, argv, &Eye, infilename, outfilename, sizeof(outfilename),
+                outfilebase,
                 resume, &atime, &wait, Start_Line, End_Line);
 //printf("5555\n");
 
