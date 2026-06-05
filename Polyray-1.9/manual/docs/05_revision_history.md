@@ -6,6 +6,8 @@ Relesed ..
 Various changes to the code now compiling under C++, modernisation and refactoring
 When evaluating Sturm, we first try guarded, bracket-saf Newton-Raphson
 NURBS2 introduced - this handles trim curves.
+Polygon subdivision code has been modernised.
+Colinear triangles are able to be detected. This is configurable, the default is not to detect them for compatibility.
 
 ### Version 1.9.4
 "Bella" Build (named after Malta's Eurovision 2026 Entry)
