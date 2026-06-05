@@ -646,10 +646,11 @@ convenience to eliminate retyping command line parameters.
 Each entry in the initialization file must appear on a separate line, and have 
 the form:
 
-default_name default_value
+default_name = default_value
 
 The names are text.  The values are numeric for some names, and text for 
-others.  The allowed names and values are:
+others.  Please note that Polyray now requires an '=' separator.
+The allowed names and values are:
 
 
    abort_test       true/false/on/off/slow
