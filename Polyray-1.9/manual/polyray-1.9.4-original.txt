@@ -655,6 +655,7 @@ others.  The allowed names and values are:
    abort_test       true/false/on/off/slow
    alias_threshold  [Value to cause adaptive antialiasing to start]
    antialias        none/filter/adaptive1/adaptive2
+   colinear         on/off
    clustersize      [# of objects stored in a slab]
    csg_tolerance    [Smallest size triangle that is checked for CSG]
    csg_subdivisions [Max # of subdivisions on CSG triangles]
