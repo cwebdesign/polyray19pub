@@ -222,12 +222,12 @@ constexpr float TWO_PI = 6.283185207179586476925286766560;
 
 #endif //has_include numbers
 
-constexpr float PYTWO_PI_3 = 2.0943951023931954923084F;
-constexpr float PYTWO_PI_43 = 4.1887902047863909846168F; //historic polyray name. actually 4*PI/3
+constexpr double PYTWO_PI_3 = 2.0943951023931954923084F;
+constexpr double PYTWO_PI_43 = 4.1887902047863909846168F; 
+//historic polyray name. actually 4*PI/3
 
-#ifndef M_SQRT2
-constexpr float M_SQRT2 = 1.41421356237309504880F;
-#endif
+constexpr double PLY_SQRT2 = std::numbers::sqrt2;// 1.41421356237309504880F;
+constexpr double PLY_SQRT3 = std::numbers::sqrt3;// 1.73206;//for superq.cc
 
 constexpr float BARY_VAL1 = -0.005;
 constexpr float BARY_VAL2 = 1.0001;
@@ -568,6 +568,15 @@ typedef struct {
     Flt sph_radius2; /**< Radius squared (precomputed for intersection tests). */
 } SphereData;
 
+/** @brief This is a placeholder for primitive data for Box */
+struct BoxData {
+    Flt bounds[2][3];
+};
+
+struct SuperQData {
+    Flt n, e;
+};
+
 
 
 
@@ -650,6 +659,7 @@ struct Transformation_Struct {
    Matrix inverse; /**< Inverse of @c matrix, kept in sync. */
    };
 
+
 /** @brief Geometric data for a cone or truncated cone primitive. */
 struct ConeData {
     short int closed; /**< Non-zero when the cone ends are capped. */
@@ -659,6 +669,45 @@ struct ConeData {
     Transform trans;  /**< Transform from canonical to world space. */
 };
 
+/** @brief This is a placeholder for primitive data for Cylinder */
+struct CylData {
+   short int closed;
+   Vec bot, top;
+   Flt radius;
+   Transform trans;
+};
+
+/** @brief This is a placeholder for primitive data for Disc */
+struct DiscData {
+   Vec center;
+   Vec normal;
+   Flt iradius, oradius;
+   Flt iradius2, oradius2, d;
+};
+
+/** @brief Primitive data for a torus shape.
+ *
+ *  The torus is defined by a @c center point, a normalised axis @c dir,
+ *  a major radius @c r0, and a minor (tube) radius @c r1.  Both radii are
+ *  stored pre-squared to avoid repeated multiplications during intersection.
+ *  @c Sturm_Flag selects the quartic root-finder used by the intersect
+ *  routine (0 = Ferrari, 1 = Vieta, 2 = Sturm–Bisection).
+ *  @c trans maps world-space rays into the canonical torus frame.
+ */
+struct TorusData {
+   Vec center, dir; /**< Stored center and normalised axis. */
+   Flt r0, r1;      /**< Major and minor radii stored SQUARED. */
+   int Sturm_Flag;  /**< Quartic solver selector: 0=Ferrari, 1=Vieta, 2=Sturm. */
+   Transform trans; /**< Canonical-space transform. */
+};
+
+/** @brief Geometric data for a paraboloid primitive. */
+struct ParabolaData {
+    short int closed; /**< Reserved; cap flag (not currently used). */
+    Vec top, bot;     /**< Apex and base-centre points in world space. */
+    Flt radius;       /**< Radius of the base circle. */
+    Transform trans;  /**< Transform from world space to canonical paraboloid space. */
+};
 
 /** @brief In-memory representation of a loaded image (Targa or PPM). */
 struct Img {
