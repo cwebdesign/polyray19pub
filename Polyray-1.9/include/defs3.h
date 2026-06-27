@@ -13,15 +13,15 @@
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation
 files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy,
-modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the 
+modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the
 Software is furnished to do so, subject to the following conditions:
 
-The above copyright notice and this permission notice shall be included in all copies or substantial portions of the 
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the
 Software.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE 
-WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR 
-COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR 
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE
+WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
 OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 */
@@ -33,7 +33,7 @@ OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 
 #include <iostream>
 #include <array>
-
+#include <vector>
 
 #if  __has_include(<numbers>) && !defined(__clang__)
 #include <numbers>
@@ -44,6 +44,9 @@ OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 #include <variant>
 
 #include <cmath>
+#include <concepts>
+#include <memory>
+
 #include <setjmp.h>
 #include <string.h>
 #include <float.h>
@@ -223,7 +226,7 @@ constexpr float TWO_PI = 6.283185207179586476925286766560;
 #endif //has_include numbers
 
 constexpr double PYTWO_PI_3 = 2.0943951023931954923084F;
-constexpr double PYTWO_PI_43 = 4.1887902047863909846168F; 
+constexpr double PYTWO_PI_43 = 4.1887902047863909846168F;
 //historic polyray name. actually 4*PI/3
 
 constexpr double PLY_SQRT2 = std::numbers::sqrt2;// 1.41421356237309504880F;
@@ -259,7 +262,7 @@ union Float_t
 };
 /** @brief Compare two floats for near-equality using an absolute threshold and a ULP distance.
  *
- *  Returns true if |A−B| <= @p maxDiff (near-zero guard) OR the ULP distance
+ *  Returns true if |A-B| <= @p maxDiff (near-zero guard) OR the ULP distance
  *  between A and B is <= @p maxUlpsDiff.
  *  @param A            First value.
  *  @param B            Second value.
@@ -292,7 +295,7 @@ inline bool AlmostEqualUlpsAndAbs(float A, float B,
 ////code from: https://randomascii.wordpress.com/2012/02/25/comparing-floating-point-numbers-2012-edition/?utm_source=pocket_mylist
 /** @brief Compare two floats for near-equality using an absolute and a relative threshold.
  *
- *  Returns true if |A−B| <= @p maxDiff OR |A−B| <= max(|A|,|B|) * @p maxRelDiff.
+ *  Returns true if |A-B| <= @p maxDiff OR |A-B| <= max(|A|,|B|) * @p maxRelDiff.
  *  @param A          First value.
  *  @param B          Second value.
  *  @param maxDiff    Absolute difference threshold (handles near-zero).
@@ -332,7 +335,7 @@ enum class rmode {
     UV_TRIANGLES     = 7, /**< Output UV-mapped triangles. */
     CSG_TRIANGLES    = 8, /**< Output CSG-clipped triangles. */
     MESH_CONVERSION  = 9, /**< Convert object to mesh. */
-    LAST_RENDER_MODE = 9  /**< Sentinel — highest valid mode index. */
+    LAST_RENDER_MODE = 9  /**< Sentinel -- highest valid mode index. */
 };
 
 /** @brief BVH acceleration structure selection. */
@@ -362,31 +365,70 @@ constexpr unsigned short REFLECT_CHECK = 0x0002;
 
 /** @brief Return true when @p x > @p y (i.e. the pair is out of ascending order). */
 #ifdef __clang__
-inline bool out_of_order(int x, int y)     { return y < x; }
+/** @brief Return true when @p x > @p y (NaN-safe generic C++20 version). */
+inline bool out_of_order(auto x, auto y) {
+    if constexpr (std::floating_point<decltype(x)> || std::floating_point<decltype(y)>) {
+        if (std::isnan(x)) return true;
+        if (std::isnan(y)) return false;
+    }
+    return y < x;
+}
 /** @brief Return true when @p x <= @p y (pair is in ascending order). */
-inline bool not_out_of_order(int x, int y) { return !out_of_order(x, y); }
-/** @brief Return the larger of @p x and @p y (stable: prefers @p x on tie). */
-inline int  stablemax(int x, int y)        { return out_of_order(x, y) ? x : y; }
-/** @brief Return the smaller of @p x and @p y.
- *  @param x  First value.
- *  @param y  Second value.
- *  @return   min(x, y).
- */
-inline int  MIN(int x, int y)              { return out_of_order(x, y) ? y : x; }
-#else
-/** @brief Return true when @p x > @p y (generic C++20 version). */
-inline bool out_of_order(auto x, auto y)     { return y < x; }
-/** @brief Return true when @p x <= @p y (generic C++20 version). */
 inline bool not_out_of_order(auto x, auto y) { return !out_of_order(x, y); }
-/** @brief Return the larger of @p x and @p y (generic C++20 version). */
+/** @brief Return the larger of @p x and @p y (stable: prefers @p x on tie). */
 auto inline stablemax(auto x, auto y)        { return out_of_order(x, y) ? x : y; }
-/** @brief Return the smaller of @p x and @p y (generic C++20 version).
+/** @brief Return the smaller of @p x and @p y. NaN-safe.
  *  @param x  First value.
  *  @param y  Second value.
  *  @return   min(x, y).
  */
 auto inline PLY_MIN(auto x, auto y)          { return out_of_order(x, y) ? y : x; }
 auto inline PLY_MIN(auto x, auto y, auto z) { return PLY_MIN(x, PLY_MIN(y, z)); }
+/** @brief Return the larger of @p x and @p y (stable: prefers @p x on tie). NaN-safe */
+auto inline PLY_MAX(auto x, auto y) {
+    if constexpr (std::floating_point<decltype(x)> || std::floating_point<decltype(y)>) {
+        if (std::isnan(x)) return y;
+        if (std::isnan(y)) return x;
+    }
+    return out_of_order(x, y) ? x : y;
+}
+/** @brief 3-argument overload for finding the furthest slab intersection. */
+auto inline PLY_MAX(auto x, auto y, auto z) { return PLY_MAX(x, PLY_MAX(y, z)); }
+/** @brief int-only MIN for legacy callers. */
+inline int  MIN(int x, int y)               { return out_of_order(x, y) ? y : x; }
+#else
+/** @brief Return true when @p x > @p y (NaN-safe generic C++20 version). */
+inline bool out_of_order(auto x, auto y) {
+    // If dealing with floats/doubles, handle NaN behavior explicitly
+    if constexpr (std::floating_point<decltype(x)> || std::floating_point<decltype(y)>) {
+        if (std::isnan(x)) return true;  // Force NaN to be considered "out of order" so it gets skipped
+        if (std::isnan(y)) return false; // If y is NaN, it's not out of order; keep the valid x
+    }
+    return y < x;
+}
+/** @brief Return true when @p x <= @p y (generic C++20 version). */
+inline bool not_out_of_order(auto x, auto y) { return !out_of_order(x, y); }
+/** @brief Return the larger of @p x and @p y (generic C++20 version). */
+auto inline stablemax(auto x, auto y)        { return out_of_order(x, y) ? x : y; }
+/** @brief Return the smaller of @p x and @p y (generic C++20 version). NaN-safe.
+ *  @param x  First value.
+ *  @param y  Second value.
+ *  @return   min(x, y).
+ */
+auto inline PLY_MIN(auto x, auto y)          { return out_of_order(x, y) ? y : x; }
+auto inline PLY_MIN(auto x, auto y, auto z) { return PLY_MIN(x, PLY_MIN(y, z)); }
+
+/** @brief Return the larger of @p x and @p y (stable: prefers @p x on tie). NaN-safe */
+auto inline PLY_MAX(auto x, auto y) {
+    if constexpr (std::floating_point<decltype(x)> || std::floating_point<decltype(y)>) {
+        if (std::isnan(x)) return y;
+        if (std::isnan(y)) return x;
+    }
+    return out_of_order(x, y) ? x : y; // Fallback to normal logic for valid numbers/ints
+}
+/** @brief 3-argument overload for finding the furthest slab intersection. */
+auto inline PLY_MAX(auto x, auto y, auto z) { return PLY_MAX(x, PLY_MAX(y, z)); }
+
 #endif //clang
 
 //todo: phase these out
@@ -415,6 +457,25 @@ using NuVec = std::array<Flt, 3>;
 using NuMatrix = std::array<fVec,3>;
 
 typedef Flt Matrix[4][4];
+
+// Template function to assign a NuVec to an fVec eg assignNuVecToFVec(sourceNuVec,destfVec)
+template <typename T, std::size_t N>
+void assignNuVecToFVec(const std::array<T, N>& src, T* dest) {
+    std::copy(src.begin(), src.end(), dest);
+}
+// Template function to copy a raw array (Vec) into a std::array (NuVec)
+template <typename T, std::size_t N>
+std::array<T, N> toNuVec(const T(&src)[N]) {
+    std::array<T, N> dest;
+    std::copy(std::begin(src), std::end(src), dest.begin());
+    return dest;
+}
+// Template to copy from a std::array to a raw array pointer
+template <typename T, std::size_t N>
+void toVec(const std::array<T, N>& src, T* dest) {
+    std::copy(src.begin(), src.end(), dest);
+}
+
 //#include <xmmintrin.h>
 #if  __has_include(<immintrin.h>)
 #include <immintrin.h>
@@ -577,7 +638,89 @@ struct SuperQData {
     Flt n, e;
 };
 
+/** @brief Per-object data for a smooth-shaded triangle primitive. */
+struct TriData {
+    NuVec /*fVec*/  tri_P[3];  /**< World-space vertex positions (P0, P1, P2). */
+    NuVec  tri_N[3];  /**< Normalised per-vertex normals (N0, N1, N2). */
+    float tri_u[3];  /**< Per-vertex U texture coordinates. */
+    float tri_v[3];  /**< Per-vertex V texture coordinates. */
+    NuVec  tri_bb[3]; /**< Rows of the inverse basis matrix [P1-P0, P2-P0, N]^-1;
+                          tri_bb[2] is the transformed face normal used for distance
+                          calculation, tri_bb[0..1] yield barycentric coordinates. */
+};
 
+// Bezier primitive data
+using Array2dint44 = std::array<std::array<fVec, 4>, 4>;
+struct BezierData {
+    int patch_type;
+    Array2dint44 Control_Points;//fVec 2d-arry 4x4
+};
+
+;
+using fourvec = std::array<float, 4>;
+struct NurbData {
+    int rat_flag;              /* Does this patch have any rational vertices */
+    int norder, npts, nknots;
+    int morder, mpts, mknots;
+    float* nknotvec, * mknotvec;
+    float* nbasis, * ndbasis;
+    float* mbasis, * mdbasis;
+    fourvec** Control_Points;
+};
+
+/* The "triangle" data structure is used to hold information about
+   the individual pieces of a height field.  As each square in the
+   field is examined, it is chopped into two right triangles & the
+   ray is tested against these triangles.*/
+struct triangle {
+    Vec v1, v2, v3, N;
+    Vec n1, n2, n3, Ni;
+    Flt d, dist;
+    char type;
+};
+
+/* Actual data structure maintained for a height field.  This holds
+   pointers to the elevation data, min/max information for the
+   elevations, overall bounds for the height field, and a triangle
+   queue.  For some height fields normal information is stored to do
+   a smoothing of the resulting height field.
+
+   As an optimization technique a queue of recently processed
+   triangles is maintained, with the expectation that successive rays
+   will very likely hit the same triangle.  This technique works best
+   if the size of triangles is larger than one pixel in the resulting
+   image.
+*/
+constexpr int MAX_CACHE = 8;
+struct HeightData {
+    int type = 0;              /* Type of field, 0 = normal, 1 = smooth */
+    //float** data;               Elevation information
+    std::vector<float> storage;
+    std::vector<float*> rows;
+    // data/rows alias into storage's buffer; do not resize storage or rows
+    // again after the initial fill, or data and every rows[z] will dangle.
+    float** data = nullptr;
+    //std::vector<float> data; //Elevation information
+    fVec** norm = nullptr;     /* Vertex normals  */
+    Flt* phi_sin = nullptr;
+    Flt* phi_cos = nullptr;    /* sin and cos of phi for spherical hf's */
+    Vec* theta_norms = nullptr;/* Normals to spherical hf's */
+    int xsize=0, zsize=0;          /* # of points/side */
+    triangle cache[MAX_CACHE]; /* Cache of nearby triangles */
+    int last_cached = 0;       /* Index of last triangle hit */
+    int cache_length = 0;      /* Number of cached triangles */
+    float low = 0.0f, high = 0.0f; /* low/high for the entire field */
+    Flt boundbox[2][3];        /* Bounds for the entire height field */
+    Transform* trans = nullptr;/* Transform to object space */
+    //access HeightData.data
+    //float& at(int z, int x) noexcept {
+    //    return data[static_cast<std::size_t>(z) * xsize + x];
+    //}
+
+    //const float& at(int z, int x) const noexcept {
+     //   return data[static_cast<std::size_t>(z) * xsize + x];
+   // }
+};
 
 
 constexpr int DEFAULT_SAMPLES=25;
@@ -653,7 +796,7 @@ struct t_ray {
    Vec D; /**< Direction of the ray (not necessarily unit length). */
    };
 
-/** @brief A 4×4 affine transform stored alongside its inverse. */
+/** @brief A 4x4 affine transform stored alongside its inverse. */
 struct Transformation_Struct {
    Matrix matrix;  /**< Forward transformation matrix. */
    Matrix inverse; /**< Inverse of @c matrix, kept in sync. */
@@ -691,7 +834,7 @@ struct DiscData {
  *  a major radius @c r0, and a minor (tube) radius @c r1.  Both radii are
  *  stored pre-squared to avoid repeated multiplications during intersection.
  *  @c Sturm_Flag selects the quartic root-finder used by the intersect
- *  routine (0 = Ferrari, 1 = Vieta, 2 = Sturm–Bisection).
+ *  routine (0 = Ferrari, 1 = Vieta, 2 = Sturm-Bisection).
  *  @c trans maps world-space rays into the canonical torus frame.
  */
 struct TorusData {
@@ -711,7 +854,7 @@ struct ParabolaData {
 
 /** @brief In-memory representation of a loaded image (Targa or PPM). */
 struct Img {
-   char *filename;        /**< Source file path. */
+   std::string filename;//source file path
    int copy;              /**< 1 when this is a shallow copy that does not own its data. */
    int bytes_per_pixel;             /**< Bytes per pixel. */
    int cflag;             /**< 1 when this is a colour-mapped (paletted) image. */
@@ -757,7 +900,7 @@ struct spline_node {
 
 /** @brief Polymorphic texture object, dispatching via function pointers. */
 struct t_texture {
-   unsigned short type;      /**< Texture kind (T_PLAIN, T_CHECKER, T_SPECIAL, …). */
+   unsigned short type;      /**< Texture kind (T_PLAIN, T_CHECKER, T_SPECIAL, ...). */
    short copy_flag;          /**< Non-zero when this texture does not own its @c data. */
    void (*del)(Texture *);   /**< Destructor: frees type-specific @c data. */
    /** @brief Evaluate the texture at a surface point and return shading parameters.
@@ -832,7 +975,7 @@ struct t_viewpoint {
    Flt view_aperture;          /**< Lens aperture diameter for depth-of-field. */
    Flt view_aspect;            /**< Pixel aspect ratio (width/height). */
    Flt view_focaldist;         /**< Focal distance for depth-of-field. */
-   Transform *WS;              /**< World-to-screen transform. */
+   std::unique_ptr<Transform> WS;              /**< World-to-screen transform. */
    float **ZBuffer;            /**< Depth buffer (scan-conversion path). */
    rgbo  **SBuffer;            /**< Colour buffer (scan-conversion path). */
    int   *edgey, *edgex;      /**< Edge tables for polygon scan-conversion. */
@@ -872,6 +1015,39 @@ struct Poly {
    Vertex vertices[POLY_NMAX]; /**< Vertex array (only indices 0..n-1 are valid). */
    };
 
+/** @brief Per-object data for a polynomial implicit surface. */
+struct PolynomialData {
+    int Order;       /**< Degree of the polynomial (1-MAX_POLYNOMIAL_ORDER). */
+    int Sturm_Flag;  /**< Root-solver selection: 0=Ferrari, 1=Vieta, 2=Sturm (bounded_polysolve). */
+    Flt* Coeffs;     /**< Coefficient array (descending-degree, lex order); owned - freed via polyray_free. */
+    std::vector<Flt> NewCoeffs;    //new coefficient array
+};
+
+// data for Poly.cc
+struct PolyData {
+    int poly_npoints;
+    fVec* poly_point;
+    fVec poly_normal;
+    float poly_d;
+    short poly_u, poly_v;
+};
+
+// primitive Revolve data
+struct RevolveData {
+    int npoints;
+    fVec* points;
+    short int itype, Sturm_Flag;
+    Transform trans;
+};
+
+// primitive data for Sweeps
+struct SweepData {
+   Vec axis;
+   int itype, npoints;
+   fVec *points;
+   Transform trans;
+};
+
 /** @brief Shape types for individual blob field components. */
 enum class BlobType {
     T_SPHERICAL_BLOB,    /**< Spherically symmetric field component. */
@@ -885,7 +1061,7 @@ enum class BlobType {
 
 /** @brief A single field component of a blob implicit surface. */
 struct Blob_Element {
-   BlobType  type;     /**< Shape of this component (sphere, cylinder, …). */
+   BlobType  type;     /**< Shape of this component (sphere, cylinder, ...). */
    Vec       pos;      /**< Centre of a spherical or toroidal component. */
    Vec       dir;      /**< Far end of a conical/cylindrical component, or torus normal. */
    Flt       len;      /**< Cylinder length, or major radius of a toroidal component. */
@@ -902,10 +1078,10 @@ struct blob_list_struct {
    };
 
 /** @brief A variable-length list of 3-D control points (used for Bezier patches). */
-typedef struct VList {
+struct VList {
    int  count;   /**< Number of points currently stored. */
    Vec *points;  /**< Heap-allocated point array (capacity managed by the caller). */
-   } VList;
+};
 
 /** @brief A single glyph outline contour for the font/glyph primitive. */
 typedef struct {
@@ -942,7 +1118,7 @@ struct t_objectprocs {
     */
    int  (*initialize)(Object *);
 
-   /** @brief Find all ray–object intersections within [mindist, maxdist].
+   /** @brief Find all ray-object intersections within [mindist, maxdist].
     *  @param Eye      Active viewpoint.
     *  @param obj      This object.
     *  @param ray      Incoming ray.
@@ -997,7 +1173,7 @@ struct ObjectVertices {
  *  same memory layout up to this point.
  */
 struct t_base {
-   unsigned short  o_type;    /**< Primitive type tag (T_SPHERE, T_BOX, …). */
+   unsigned short  o_type;    /**< Primitive type tag (T_SPHERE, T_BOX, ...). */
    bbox_info       o_bnd;     /**< Axis-aligned bounding box. */
    Object         *o_parent;  /**< Owning/parent object, or nullptr. */
    Texture        *o_texture; /**< Texture applied to this object. */
@@ -1008,7 +1184,7 @@ struct t_object : t_base {
    ObjectProcs                  *o_procs;    /**< Virtual function table for this primitive type. */
    float                         o_dither;   /**< Per-object stochastic dither amount. */
    unsigned short                o_copy;     /**< Non-zero when this is a shared copy (data not owned). */
-   unsigned short                o_sflag;    /**< Shading flags (SHADOW_CHECK, REFLECT_CHECK, …). */
+   unsigned short                o_sflag;    /**< Shading flags (SHADOW_CHECK, REFLECT_CHECK, ...). */
    csgnode                      *o_csg_tree; /**< CSG operation tree rooted at this object, or nullptr. */
    std::array<unsigned short,3>  o_uv_steps; /**< Tessellation resolution along U, V, and W. */
    std::array<float,4>           o_uv_bounds;/**< UV parameter bounds: [u_min, u_max, v_min, v_max]. */
@@ -1024,11 +1200,11 @@ struct t_object : t_base {
  *  The @c o_parent field is used to find the owning object for texturing.
  */
 struct TriangleObject : t_base {
-   long o_vert[3];  /**< Indices into the parent object's vertex array. */
-   long o_nvert[3]; /**< Indices into the parent object's normal array. */
+   std::array<long,3> o_vert;  /**< Indices into the parent object's vertex array. */
+   std::array<long,3> o_nvert; /**< Indices into the parent object's normal array. */
    };
 
-/** @brief Record of a ray–surface intersection (hit record). */
+/** @brief Record of a ray-surface intersection (hit record). */
 struct t_isect {
    int      flag;    /**< Non-zero when this record holds a valid hit. */
    Flt      isect_t; /**< Ray parameter (distance) at the intersection point. */
@@ -1121,7 +1297,7 @@ using exdata = std::variant  <
  */
 struct exper_node_struct {
    int      exper_type;  /**< Node type tag; values defined in polyray.y. */
-   exdata   exper_data;  /**< Variant payload (string, scalar, vector, function, …). */
+   exdata   exper_data;  /**< Variant payload (string, scalar, vector, function, ...). */
    NODE_PTR left, right; /**< Child sub-expressions, or nullptr for leaves. */
    };
 
@@ -1156,7 +1332,7 @@ struct subst_struct {
    Vec I;     /**< Incident ray direction in world space. */
    };
 
-/** @brief Procedural surface definition — all shading components are expression trees.
+/** @brief Procedural surface definition -- all shading components are expression trees.
  *
  *  Every field is a @c NODE_PTR that is evaluated at run-time for each
  *  intersection, giving the surface access to the hit point, normal,
@@ -1267,6 +1443,13 @@ struct t_object_tree {
    Object *slab_root;    /**< Root of the bounding slab acceleration tree. */
    };
 
+
+struct RawData {
+    BinTree objs; /* Bounding hierarchy of raw triangles */
+    float smooth; /* Maximum angle to smooth */
+};
+
+
 /** @brief Definition of a particle system generator (expression-driven). */
 struct Particle {
    NODE_PTR P;             /**< Position expression. */
@@ -1320,11 +1503,72 @@ constexpr int MAX_CACHE_BLOCKING = 10;
 
 /** @brief A light source in the scene. */
 struct t_light {
-   int    type;                          /**< Light type (point, directional, spot, …). */
+   int    type;                          /**< Light type (point, directional, spot, ...). */
    int    flags;                         /**< Behaviour flags (casting shadows, etc.). */
    void  *data;                          /**< Type-specific light parameters. */
    Light *next;                          /**< Next light in the scene list. */
    Object *cache[MAX_CACHE_BLOCKING];    /**< Shadow cache: recently shadowing objects. */
    };
+
+struct t_depth_light {
+    NODE_PTR color;
+    Img* light_depth;
+    Vec light_from;
+    Vec light_at;
+    Vec light_up;
+    Flt light_angle;
+    Flt light_aspect;
+    float light_bias;
+    Transform* WS;
+};
+
+struct FLARECOMP {
+    NODE_PTR color; /* Color function for this flare */
+    int count;      /* Total number of flares with this light */
+    float spacing;  /* Power function for lens spacing */
+    int seed;       /* Random number seed for building flare spacing */
+    float min_rad;  /* Smallest flare size (fraction of image width [0, 1]) */
+    float max_rad;  /* Largest flare size */
+    float concave;  /* Ratio of concave to convex flares */
+    float radius;   /* Size of glow around the light */
+};
+
+struct PolyAlightData {
+    /* Light specific information */
+    int ures, vres;               /* # sample points wide/high */
+    int adaptive_depth;           /* How deep to recurse when sampling */
+    Vec lower_left, upper_right;  /* Bounds of the light emiting polygon */
+    Vec ubasis, vbasis;           /* Basis vectors for the polygon */
+    std::vector<NuVec> nbuf;      //Temp storage of shadow colors
+    std::vector<NuVec> obuf;       /* Temp storage of shadow colors */
+    std::vector<NuVec> sbuf1,  sbuf2;           /* Temp storage of shadow points */
+    Flt jitter;                   /* Amount of jitter to apply to shadow rays */
+
+    /* Basic polygon information */
+    int npoints;
+    fVec* points;             /* Polygon boundary (in world coordinates?) */
+    fVec normal;
+    float d;
+    short u, v;
+};
+
+struct t_textured_light {
+    NODE_PTR color;    /* Run-time color for light */
+    Vec dcolor;        /* If color doesn't change then this one is faster */
+    Flt radius;        /* Radius when used as an area light */
+    FLARECOMP* lens_flare; /* Linked list of flares attached to this light */
+    Transform* tx;
+    PolyAlightData* alight; /* Data used if this is a polygonal light */
+};
+
+struct t_spot_light {
+    Vec light_pos, light_dir, light_color;
+    Flt Coef, Radius, Falloff;
+};
+
+struct t_point_light {
+    Vec light_pos, light_color;
+};
+
 
 #endif
