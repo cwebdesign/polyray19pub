@@ -485,12 +485,11 @@ InvTxVec(Vec out, Vec vec, Transform *tx)
 void
 InvTxVec1(Vec out, Vec vec, Transform *tx)
 {
-   Matrix *matrix = &tx->inverse;
-
    if (tx == NULL) {
-      VecCopy(vec, out);
-      return;
-      }
+	      VecCopy(vec, out);
+	      return;
+   }
+   Matrix *matrix = &tx->inverse;
 
    out[0] = vec[0] * (*matrix)[0][0] + vec[1] * (*matrix)[1][0] +
             vec[2] * (*matrix)[2][0] + (*matrix)[3][0];
