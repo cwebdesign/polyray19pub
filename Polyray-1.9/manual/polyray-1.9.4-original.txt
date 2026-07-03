@@ -5335,6 +5335,8 @@ This is useful if you have a program that will generate new data for every
 frame of an animation.  By using system, you can invoke the external program 
 for every frame of the program, and possibly pass it the frame number so that 
 it will know the specific data to generate.
+By default this is disabled in version 2 (C++ version). To enable it you must
+use the -s parameter.
 
 The format of the declaration is:
 
