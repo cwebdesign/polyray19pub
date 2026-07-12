@@ -2,8 +2,8 @@
  *  @brief Global types, constants, vector macros, and scene-graph structs.
  *
  *  This is the single most-included header in the renderer.  It defines:
- *  - Scalar and vector typedefs (@c Flt, @c Vec, @c fVec)
- *  - All scene-graph structs (@c t_object, @c t_ray, @c t_isect)
+ *  - Scalar and vector typedefs
+ *  - All scene-graph structs
  *  - Vector arithmetic macros (VecAdd, VecDot)
  *  - Numeric constants and floating-point comparison utilities
  *
@@ -606,7 +606,9 @@ typedef struct t_noise_surface Noise_Surface;
 typedef struct Transformation_Struct Transform;
 typedef struct t_ray Ray;
 typedef struct t_viewpoint Viewpoint;
-typedef struct t_objectprocs ObjectProcs;
+namespace openpolyray::dispatch {
+using ObjectProcs = struct t_objectprocs;
+};
 typedef struct t_isect Isect;
 typedef struct csgnode *csgnodeptr;
 typedef struct color_map_entry *map_entries;
@@ -623,11 +625,11 @@ typedef struct texture_stack_struct *tstackptr;
 
 
 /** @brief Geometric data for a sphere or ellipsoid primitive. */
-typedef struct {
+struct SphereData {
     Vec sph_center;  /**< Centre point in object space. */
     Flt sph_radius;  /**< Radius. */
     Flt sph_radius2; /**< Radius squared (precomputed for intersection tests). */
-} SphereData;
+};
 
 /** @brief This is a placeholder for primitive data for Box */
 struct BoxData {
@@ -722,6 +724,17 @@ struct HeightData {
    // }
 };
 
+struct HypertextureData {
+    int flag;            /* Set to 0 if the object hasn't been initialized */
+    NODE_PTR fn;         /* Symbolic function */
+    Vec deltas;          /* Size of each voxel */
+    int sizes[3];        /* Number of sides of the containing box */
+};
+
+/** @brief Per-object data for a parametric surface primitive. */
+struct ParametricData {
+    NODE_PTR formula; /**< Vector-valued expression f(u,v) defining the surface; owned by this struct. */
+};
 
 constexpr int DEFAULT_SAMPLES=25;
 constexpr Flt DEFAULT_THRESHOLD=0.2;
@@ -1044,7 +1057,8 @@ struct RevolveData {
 struct SweepData {
    Vec axis;
    int itype, npoints;
-   fVec *points;
+   //fVec *points;
+   std::vector<NuVec> points;
    Transform trans;
 };
 
@@ -1084,67 +1098,26 @@ struct VList {
 };
 
 /** @brief A single glyph outline contour for the font/glyph primitive. */
-typedef struct {
+struct Contour {
    int   count;   /**< Number of control points in this contour. */
    fVec *points;  /**< X,Y coordinates; Z encodes the on/off-curve flag (0 = on-curve). */
-   } Contour;
+};
 
-/** @brief Virtual function table for a scene primitive.
- *
- *  Every primitive type sets exactly one @c ObjectProcs and stores a pointer
- *  to it in @c t_object::o_procs.  Generic fallbacks (GenericRender, GenericCopy,
- *  GenericDelete, GenericInitialize) are used when a primitive does not need
- *  a custom implementation.
- */
-struct t_objectprocs {
-   /** @brief Tessellate the object into polygons and render via scan conversion.
-    *  @param eye   Active viewpoint.
-    *  @param root  Scene BVH.
-    *  @param obj   This object.
-    */
-   void (*render)(Viewpoint *, BinTree *, Object *);
+struct GridData {
+    unsigned char** data; /* Elevation information */
+    int obj_cnt;          /* # of distinct objects in the grid */
+    BinTree* objs;        /* Array of objects stored in the grid */
+    int xsize, zsize;     /* # of points/side */
+    Flt boundbox[2][3];   /* Bounds for the entire height field */
+};
 
-   /** @brief Evaluate object-space position, normal and UV at parametric (u,v).
-    *  @param obj   This object.
-    *  @param u     Horizontal parametric coordinate [0,1].
-    *  @param v     Vertical parametric coordinate [0,1].
-    *  @param vert  Output vertex receiving position, normal, UV, and world position.
-    */
-   void (*evaluate)(Object *, Flt, Flt, Vertex *);
+struct FunctionData {
+    int flag;            /* Set to 0 if the object hasn't been initialized */
+    NODE_PTR fn;         /* Symbolic function */
+    Vec deltas;          /* Size of each voxel */
+    int sizes[3];        /* Number of sides of the containing box */
+};
 
-   /** @brief Perform any one-time post-creation initialisation.
-    *  @param obj  Newly constructed object.
-    *  @return     Non-zero on success.
-    */
-   int  (*initialize)(Object *);
-
-   /** @brief Find all ray-object intersections within [mindist, maxdist].
-    *  @param Eye      Active viewpoint.
-    *  @param obj      This object.
-    *  @param ray      Incoming ray.
-    *  @param mindist  Near clip distance.
-    *  @param maxdist  Far clip distance.
-    *  @param hit      Output intersection accumulator.
-    *  @return         Non-zero when at least one hit was recorded.
-    */
-   int  (*intersect)(Viewpoint *Eye, Object *, Ray *, Flt, Flt, Isect *);
-
-   /** @brief Test whether a point is inside the object's volume.
-    *  @param obj  This object.
-    *  @param P    Point in world space.
-    *  @return     Non-zero when the point is inside.
-    */
-   int  (*inside)(Object *, Vec);
-
-   /** @brief Deep-copy object-specific data from @p src to @p dst.
-    *  @param src  Source object.
-    *  @param dst  Destination object.
-    */
-   void (*copy)(Object *, Object *);
-
-   /** @brief Free object-specific data owned by @p obj. */
-   void (*del)(Object *);
-   };
 
 /** @brief A node in a Constructive Solid Geometry (CSG) operation tree. */
 struct csgnode {
@@ -1167,42 +1140,8 @@ struct ObjectVertices {
    fVec     *U;  /**< Texture UV/W coordinates (array of @c n). */
    };
 
-/** @brief Common header shared by all object types (including TriangleObject).
- *
- *  Kept POD-like so that @c t_object and @c TriangleObject can alias the
- *  same memory layout up to this point.
- */
-struct t_base {
-   unsigned short  o_type;    /**< Primitive type tag (T_SPHERE, T_BOX, ...). */
-   bbox_info       o_bnd;     /**< Axis-aligned bounding box. */
-   Object         *o_parent;  /**< Owning/parent object, or nullptr. */
-   Texture        *o_texture; /**< Texture applied to this object. */
-   Transform      *o_trans;   /**< Accumulated world-space transform (lazily allocated). */
-};
-/** @brief Full scene primitive object (extends t_base with ray-tracing data). */
-struct t_object : t_base {
-   ObjectProcs                  *o_procs;    /**< Virtual function table for this primitive type. */
-   float                         o_dither;   /**< Per-object stochastic dither amount. */
-   unsigned short                o_copy;     /**< Non-zero when this is a shared copy (data not owned). */
-   unsigned short                o_sflag;    /**< Shading flags (SHADOW_CHECK, REFLECT_CHECK, ...). */
-   csgnode                      *o_csg_tree; /**< CSG operation tree rooted at this object, or nullptr. */
-   std::array<unsigned short,3>  o_uv_steps; /**< Tessellation resolution along U, V, and W. */
-   std::array<float,4>           o_uv_bounds;/**< UV parameter bounds: [u_min, u_max, v_min, v_max]. */
-   NODE_PTR                      o_displace; /**< Surface displacement expression, or nullptr. */
-   void                         *o_data;     /**< Type-specific shape data (owned unless o_copy is set). */
-   ObjectVertices               *o_vertices; /**< Pre-computed polygon mesh data, or nullptr. */
-   };
+//t_object from here moved to object_dispatch.h
 
-/** @brief Lightweight triangle primitive that overlays the t_base header.
- *
- *  Shares the @c t_base memory layout with @c t_object so a @c TriangleObject*
- *  can be cast to @c Object* safely up to the @c t_base fields.
- *  The @c o_parent field is used to find the owning object for texturing.
- */
-struct TriangleObject : t_base {
-   std::array<long,3> o_vert;  /**< Indices into the parent object's vertex array. */
-   std::array<long,3> o_nvert; /**< Indices into the parent object's normal array. */
-   };
 
 /** @brief Record of a ray-surface intersection (hit record). */
 struct t_isect {
@@ -1447,6 +1386,18 @@ struct t_object_tree {
 struct RawData {
     BinTree objs; /* Bounding hierarchy of raw triangles */
     float smooth; /* Maximum angle to smooth */
+};
+
+/* Structure to hold points in a contour */
+using cpointPtr = struct cpoints_struct*;
+struct cpoints_struct {
+    float x, y;
+    cpointPtr next, last;
+};
+
+struct GlyphData {
+    int count;         /* Number of contours */
+    Contour* contours; /* Actual contours */
 };
 
 
