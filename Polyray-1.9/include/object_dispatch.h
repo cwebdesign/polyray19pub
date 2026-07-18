@@ -1,5 +1,7 @@
 #pragma once
 
+#include "defs3.h"
+
 namespace openpolyray::dispatch {
 
 /** @brief Virtual function table for a scene primitive.
@@ -58,7 +60,10 @@ struct t_objectprocs {
    /** @brief Free object-specific data owned by @p obj. */
    void (*del)(Object *) = nullptr;
    };
-  
+
+/** @brief Convenience alias for the object vtable type. */
+using ObjectProcs = t_objectprocs;
+
 }//namespace
 
 
@@ -68,7 +73,7 @@ struct t_objectprocs {
  *  same memory layout up to this point.
  */
 struct t_base {
-	unsigned short  o_type;    /**< Primitive type tag (T_SPHERE, T_BOX, ...). */
+	ShapeType  o_type;    /**< Primitive type tag (T_SPHERE, T_BOX, ...). */
 	bbox_info       o_bnd;     /**< Axis-aligned bounding box. */
 	Object* o_parent;  /**< Owning/parent object, or nullptr. */
 	Texture* o_texture; /**< Texture applied to this object. */
