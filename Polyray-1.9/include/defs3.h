@@ -62,12 +62,6 @@ enum class OUT_FORMAT {
     OUT_RAWPPM = 2  /**< Raw PPM (.ppm) output. */
 };
 
-/** @brief Linkage qualifier for functions that must be visible during unit testing.
- *
- *  Expands to nothing (external linkage) when @c TESTING is defined, so that
- *  normally-@c static functions are reachable from GTest.  Otherwise expands
- *  to @c static.
- */
 #ifdef TESTING
   #define UNIT_STATIC(x) x
 #else
@@ -606,9 +600,6 @@ typedef struct t_noise_surface Noise_Surface;
 typedef struct Transformation_Struct Transform;
 typedef struct t_ray Ray;
 typedef struct t_viewpoint Viewpoint;
-namespace openpolyray::dispatch {
-using ObjectProcs = struct t_objectprocs;
-};
 typedef struct t_isect Isect;
 typedef struct csgnode *csgnodeptr;
 typedef struct color_map_entry *map_entries;
@@ -687,7 +678,7 @@ struct triangle {
    queue.  For some height fields normal information is stored to do
    a smoothing of the resulting height field.
 
-   As an optimization technique a queue of recently processed
+   As an optimisation technique a queue of recently processed
    triangles is maintained, with the expectation that successive rays
    will very likely hit the same triangle.  This technique works best
    if the size of triangles is larger than one pixel in the resulting
@@ -739,69 +730,73 @@ struct ParametricData {
 constexpr int DEFAULT_SAMPLES=25;
 constexpr Flt DEFAULT_THRESHOLD=0.2;
 
-/* Basic primitive types: */
-constexpr int T_NULL =             (0);
-constexpr int T_BLOB =             (1);
-constexpr int T_BOX =              (2);
-constexpr int T_BEZIER =           (3);
-constexpr int T_CONE =             (4);
-constexpr int T_CSG =              (5);
-constexpr int T_CYLINDER =         (6);
-constexpr int T_CYL_HEIGHT_FIELD = (7);
-constexpr int T_DISC =             (8);
-constexpr int T_FUNCTION =         (9);
-constexpr int T_GLYPH =           (10);
-#define T_GRIDDED          (11)
-#define T_HEIGHT_FIELD     (12)
-#define T_HYPERTEXTURE     (13)
-#define T_LIGHT            (14)
-#define T_NURB             (15)
-#define T_PARABOLA         (16)
-#define T_PARAMETRIC       (17)
-#define T_POLY             (18)
-#define T_POLYNOMIAL       (19)
-#define T_RAW_TRIANGLES    (20)
-#define T_REVOLVE          (21)
-#define T_SPHERE           (22)
-#define T_SPH_HEIGHT_FIELD (23)
-#define T_SUPERQ           (24)
-#define T_SWEEP            (25)
-#define T_TORUS            (26)
-#define T_TRI              (27)
-/* Specialized object types: */
-#define T_COMPOSITE     (28)
-#define T_POLYGON       (29)
+// Basic primitive types:
+using Shaper = unsigned short;
+enum class ShapeType : Shaper {
+Null =             (0),
+Blob =             (1),
+Box =              (2),
+Bezier =           (3),
+Cone =             (4),
+Csg =              (5),
+Cylinder =         (6),
+Cyl_Height_Field = (7),
+Disc =             (8),
+Function =         (9),
+Glyph =           (10),
+Gridded =         (11),
+Height_Field =    (12),
+Hypertexture =    (13),
+Light =           (14),
+Nurb =            (15),
+Parabola =        (16),
+Parametric =      (17),
+Poly =            (18),
+Polynomial =      (19),
+Raw_Triangles =   (20),
+Revolve =         (21),
+Sphere =          (22),
+Sph_Height_Field= (23),
+SuperQ =          (24),
+Sweep =           (25),
+Torus =           (26),
+Tri =             (27),
+// Specialized object types:
+Composite =       (28),
+Polygon =         (29),
+
+// Define the types of entries in a CSG tree
+Base_Object =     (50),
+Union =           (51),
+Intersection =    (52),
+Inverse =         (53),
+Clip =            (54),
+Merge =           (55),
+
+// Define the distinct types of textures
+Plain =          (100),
+Checker =        (101),
+Special =        (102),
+Hexagon =        (103),
+Noise =          (104),
+Layered =        (105),
+Indexed =        (106),
+Summed =         (107),
+
+// Define the types of entries in the symbol table
+String =         (160),     // Character string
+Object =         (161),     // A object definition
+Surface =        (162),     // A surface definition
+Texture =        (163),     // A texture definition
+Expression =     (164),     // An expression definition
+Transform =      (165),     // A transformation definition
+Texture_Map =    (166),     // A texture map definition
+Particle =       (167)     // A particle generator
+
+};
 
 constexpr int FIRST_OBJECT_TYPE = (1);
 constexpr int LAST_OBJECT_TYPE = (29);
-
-/* Define the types of entries in a CSG tree */
-#define T_BASE_OBJECT    (50)
-#define T_UNION          (51)
-#define T_INTERSECTION   (52)
-#define T_INVERSE        (53)
-#define T_CLIP           (54)
-#define T_MERGE          (55)
-
-/* Define the distinct types of textures */
-#define T_PLAIN          (100)
-#define T_CHECKER        (101)
-#define T_SPECIAL        (102)
-#define T_HEXAGON        (103)
-#define T_NOISE          (104)
-#define T_LAYERED        (105)
-#define T_INDEXED        (106)
-#define T_SUMMED         (107)
-
-/* Define the types of entries in the symbol table */
-#define T_STRING         (160)     /* Character string */
-#define T_OBJECT         (161)     /* A object definition */
-#define T_SURFACE        (162)     /* A surface definition */
-#define T_TEXTURE        (163)     /* A texture definition */
-#define T_EXPRESSION     (164)     /* An expression definition */
-#define T_TRANSFORM      (165)     /* A transformation definition */
-#define T_TEXTURE_MAP    (166)     /* A texture map definition */
-#define T_PARTICLE       (167)     /* A particle generator */
 
 /** @brief A ray defined by an origin and a direction. */
 struct t_ray {
@@ -913,7 +908,7 @@ struct spline_node {
 
 /** @brief Polymorphic texture object, dispatching via function pointers. */
 struct t_texture {
-   unsigned short type;      /**< Texture kind (T_PLAIN, T_CHECKER, T_SPECIAL, ...). */
+   ShapeType type;      /**< Texture kind (T_PLAIN, T_CHECKER, T_SPECIAL, ...). */
    short copy_flag;          /**< Non-zero when this texture does not own its @c data. */
    void (*del)(Texture *);   /**< Destructor: frees type-specific @c data. */
    /** @brief Evaluate the texture at a surface point and return shading parameters.
@@ -1140,7 +1135,10 @@ struct ObjectVertices {
    fVec     *U;  /**< Texture UV/W coordinates (array of @c n). */
    };
 
-//t_object from here moved to object_dispatch.h
+// t_base / t_object / TriangleObject and the ObjectProcs vtable are defined here.
+// Included at this point so the forward-declared aliases above (Object, Viewpoint,
+// Ray, ...) and the by-value members (bbox_info, ObjectVertices) are already visible.
+#include "object_dispatch.h"
 
 
 /** @brief Record of a ray-surface intersection (hit record). */
