@@ -1,8 +1,11 @@
-  /* Unix compatibity defines */
 
-#ifdef __cplusplus
-namespace polyray {
-#endif
+  /* Unix compatibity defines */
+#pragma once
+#if !defined(__POLYRAY_UNIXCOMPAT)
+#define __POLYRAY_COMPAT
+
+namespace openpolyray {
+
 
 //#ifndef UNIXCOMPAT
 //#if defined(__unix__)||defined(__UNIX__)||defined(unix)||defined(linux)||defined(_linux)
@@ -82,6 +85,6 @@ typedef unsigned __int64  uint64_t;
 int mkstemp(char *tmpl);
 #endif
 
-#ifdef __cplusplus
 }
+
 #endif
