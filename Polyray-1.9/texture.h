@@ -20,5 +20,7 @@ void TextureScale(Texture *, Vec);
 void copy_special0(Special_Surface *, Special_Surface *);
 void delete_texture_map(texture_map_entries);
 
+
+
 #endif /* __POLYRAY_TEXTURE_DEFS */
 

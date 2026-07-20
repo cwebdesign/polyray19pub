@@ -1,5 +1,5 @@
 
-  /* Unix compatibity defines */
+/* Unix compatibity defines */
 #pragma once
 #if !defined(__POLYRAY_UNIXCOMPAT)
 #define __POLYRAY_COMPAT
