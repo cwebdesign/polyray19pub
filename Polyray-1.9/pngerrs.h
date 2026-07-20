@@ -16,9 +16,10 @@
 #    error "errors.h included without definitions selected."
 #  endif
 
+
 #  define ASSOCIATE(id,str) str,
 
-char *ptot_error_messages[] = {
+std::string ptot_error_messages[] = {
 
 #else /* DEFINE_ENUMS */
 

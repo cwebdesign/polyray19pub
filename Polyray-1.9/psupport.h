@@ -1,33 +1,52 @@
 #if !defined(__POLYRAY_PSUPPORT_DEFS)
 #define __POLYRAY_PSUPPORT_DEFS
 
+#include <string>
+#include <bitset>
+extern std::bitset<MAX_CONDITION_DEPTH> condition_flags;
+std::string build_outfile_name(std::string outfilebase);
+void InitializeSpecialSurface(Special_Surface& NewSurf);
+
+bool check_condition();
+
+//parser support
+void InitializeSurface(Surface&);
+#ifdef TESTING
+extern void InitializeObject(Object& obj);
+#endif
+int create_string(NODE_PTR exper, std::string& name);
+
 /* Parser support variables */
-extern fVec *pl, *plist;
+extern fVec* pl, * plist;
 extern ostackptr Object_Stack;
 extern tstackptr Texture_Stack;
 extern blobstackptr blob_components;
 extern blobstackptr blob_component;
-extern int condition_flags[];
+//extern int condition_flags[];
 extern int condition_depth;
-extern Transform *Current_Transform;
-extern Special_Surface *CurrentSurface;
+extern Transform* Current_Transform;
+extern Special_Surface* CurrentSurface;
 extern int npoints;
 extern int ObjectDepth;
 extern txstackptr txstack;
 extern UVVert tri_vertex[3];
 
+extern void ReadSceneFile(std::string str);
+
+
+
+
 /* Parser support functions */
-extern void ReadSceneFile(char *str);
+
 extern void TransformObject(Object *, Transform *);
 extern void RotateObject(Object *, Vec);
 extern void RotateAxisObject(Object *, Vec, Flt);
 extern void TranslateObject(Object *, Vec);
 extern void ShearObject(Object *, Flt, Flt, Flt, Flt, Flt, Flt);
 extern void ScaleObject(Object *, Vec);
-extern void InitializeSurface(Surface *);
-extern void InitializeSpecialSurface(Special_Surface *NewSurf);
-extern void build_outfile_name(char *outfilebase, char *outfilename);
-extern int check_condition(void);
+extern int C_create_string(NODE_PTR exper, char **name);
+
+
 extern void surface_action1(void);
 extern void surface_action2(char *);
 extern void push_texture(Texture *text);
@@ -81,7 +100,7 @@ extern void spherical_component_action(Vec, Flt, Flt);
 extern void cylindrical_component_action(Vec, Vec, Flt, Flt);
 extern void planar_component_action(Vec, Flt, Flt, Flt);
 extern void toroidal_component_action(Vec, Vec, Flt, Flt, Flt);
-extern char *translate_string(char *);
+//extern char *translate_string_marked_for_deletion(char *);
 extern char *build_string(LIST_PTR);
 extern void evaluate_system_call(LIST_PTR);
 extern void push_tx(Transform *);
@@ -91,6 +110,7 @@ extern texture_fn_entries texture_fn_action2(texture_fn_entries,
                                              texture_fn_entries);
 extern texture_map_entries make_texture_map_entry(Flt, Flt, Texture *,
                                                   Texture *);
+extern texture_map_entries copy_texture_map_void(void *vmap);
 extern texture_map_entries copy_texture_map(texture_map_entries map);
 extern texture_map_entries texture_map_action1(char *);
 extern texture_map_entries texture_map_action2(texture_map_entries,
@@ -98,6 +118,7 @@ extern texture_map_entries texture_map_action2(texture_map_entries,
 extern int create_string(NODE_PTR, char **);
 extern void draw_action(Flt low, Flt high, int steps,
                         NODE_PTR points, NODE_PTR color);
+
 
 #endif /* __POLYRAY_PSUPPORT_DEFS */
 

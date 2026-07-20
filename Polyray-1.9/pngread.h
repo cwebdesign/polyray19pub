@@ -11,6 +11,10 @@
  *          <URL:http://www.piclab.com/piclab/index.html>
  */
 
+extern int read_PNG_image(FILE* , Img* );
+
+
+
 #ifdef _X86_            /* Intel i86 family */
 #  define LITTLE_ENDIAN
 #endif
@@ -25,12 +29,6 @@
 #  endif
 #endif
 
-#ifndef min
-#define min(x,y) (((x)<(y))?(x):(y))
-#endif
-#ifndef max
-#define max(x,y) (((y)<(x))?(x):(y))
-#endif
 
 /*
  * Some types and macros for easier porting. Byte swapping is the
@@ -74,9 +72,6 @@ typedef unsigned long   U32;
 #define PUT32(p,d)  (*(U32*)(p)=(d))
 #define GET32(p)    (*(U32*)(p))
 
-#if !defined(BIG_ENDIAN) && !defined(LITTLE_ENDIAN)
-#  error "No byte order defined"
-#endif
 
 #ifdef BIG_ENDIAN
 #  define BE_GET16(p)     GET16(p)
@@ -223,7 +218,6 @@ extern U16 ASCII_tags[N_KEYWORDS];
 
 U32 update_crc(U32, U8 *, U32);
 
-int read_PNG(FILE *, IMG_INFO *);
 int get_chunk_header(void);
 U32 get_chunk_data(U32);
 int verify_chunk_crc(void);
@@ -238,7 +232,7 @@ size_t new_line_size(IMG_INFO *, int, int);
 int get_local_byte_order(void);
 int write_TIFF(FILE *, IMG_INFO *);
 
-int create_tempfile(int); 
+int create_tempfile(int);
 int open_tempfile(int);
 void close_all_tempfiles(void);
 void remove_all_tempfiles(void);
@@ -270,7 +264,7 @@ typedef void *voidp;
 
 #define IOBUF_SIZE 8192 /* Must be at least 768 for PLTE */
 
-typedef struct _png_state {
+typedef struct _png_state_OLD {
     FILE *inf, *tf[7];
     char *tfnames[7];
     IMG_INFO *image;

@@ -1,6 +1,7 @@
 #if !defined(__POLYRAY_PARTICLE_DEFS)
 #define __POLYRAY_PARTICLE_DEFS
 
+
 Particle *CreateParticle(void);
 void DeleteParticle(Particle *particle);
 Particle *CopyParticle(char *name);
