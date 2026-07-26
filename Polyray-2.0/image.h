@@ -1,12 +1,17 @@
+#pragma once
 #if !defined(__POLYRAY_IMAGE_DEFS)
 #define __POLYRAY_IMAGE_DEFS
 
 #include <expected>
+#include <optional>
 #include <string>
 
-#define POLY_CLIP_OUT 0         /* polygon entirely outside box */
-#define POLY_CLIP_PARTIAL 1     /* polygon partially inside */
-#define POLY_CLIP_IN 2          /* polygon entirely inside box */
+enum class PolyClip {
+    PolyClipOut, //polygon entirely outside box =0
+    PolyClipPartial, //polygon partially inside =1
+    PolyClipIn   //polygon entirely inside box  =2
+};
+
 
 enum class ErrImage {
   ErrUnresolvedBackgroundExpression,
@@ -27,9 +32,6 @@ float tx_point(Transform& tx, Vec P, fVec S);
 
 void quantize_depth_CPP(float depth, NuVec& color, Flt& opacity);
 
-#ifdef __cplusplus
-	extern "C" {
-#endif
 
 /* Routines to manage the image we are building:
       allocating buffers,
@@ -37,8 +39,10 @@ void quantize_depth_CPP(float depth, NuVec& color, Flt& opacity);
       get/set pixel values
 */
 
-/* Polygon specific stuff: zbuffer, clipping, and shading routines */
-extern int poly_clip_to_box(Poly *p1, Poly_box *box);
+// Polygon specific stuff: zbuffer, clipping, and shading routines 
+PolyClip poly_clip_to_box(Poly *p1, Poly_box *box);
+std::optional<PolyClip> CLIP_AND_SWAP(int index, Flt sign, Flt k,
+    Poly* p, Poly* q, Poly* r, Poly* p1);
 
 extern void Initialize_Clipping(Viewpoint *eye, int y_start, int y_end);
 extern void Destroy_Scan_Buffers(Viewpoint *);
@@ -52,7 +56,7 @@ extern void draw_point(Viewpoint *eye, float x, float y, float z,
 extern void draw_2dline(Viewpoint *eye, fVec P0, fVec C0, float opac0,
                         fVec P1, fVec C1, float opac1);
 
-/* Image file routines */
+// Image file routines 
 extern void quantize_depth(float depth, Vec color, Flt *opacity);
 extern void FreeImg(Img *img);
 extern Img *TGAReadImage(char *);
@@ -61,9 +65,5 @@ extern int lookup_image_color(Img *image, Flt x, Flt y, int rflag,
 extern int lookup_height(Img *image, Flt x, Flt y, int rflag, Flt *height);
 extern int lookup_index(Img *image, Flt x, Flt y, int rflag, Flt *index);
 extern float image_height(Img *image, int x, int y);
-
-#ifdef __cplusplus
-  }
-#endif
 
 #endif /* __POLYRAY_IMAGE_DEFS */

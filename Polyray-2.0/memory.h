@@ -1,3 +1,4 @@
+#pragma once
 /* memory.h
 
   Polyray - MIT Licensed Revival
@@ -20,9 +21,6 @@ OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 */
 #if !defined(__POLYRAY_MEMORY_DEFS)
 #define __POLYRAY_MEMORY_DEFS
-#ifdef __cplusplus
-	extern "C" {
-#endif
 
 #include <stdlib.h>
 #include <string.h>
@@ -41,15 +39,11 @@ void *debug_malloc(const char *, int, size_t);
 void debug_free(const char *, int, void *);
 void *default_malloc(size_t);
 void default_free(void *);
-void allocation_status(void);
-void free_all_memory(void);
+void allocation_status();
+void free_all_memory();
 
 /* Memory monitoring variables */
 extern unsigned long nMalloc;
 extern unsigned long nFree;
-
-#ifdef __cplusplus
-  }
-#endif
 
 #endif /* __POLYRAY_MEMORY_DEFS */

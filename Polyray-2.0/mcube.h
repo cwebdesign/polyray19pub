@@ -1,3 +1,4 @@
+#pragma once
 #if !defined(__MCUBE_SCAN_DEFS)
 #define __MCUBE_SCAN_DEFS
 

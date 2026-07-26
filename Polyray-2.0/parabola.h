@@ -1,3 +1,4 @@
+#pragma once
 #if !defined(__POLYRAY_PARABOLA_DEFS)
 #define __POLYRAY_PARABOLA_DEFS
 

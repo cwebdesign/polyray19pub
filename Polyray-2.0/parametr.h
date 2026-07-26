@@ -1,3 +1,4 @@
+#pragma once
 #if !defined(__POLYRAY_PARAMETRIC_DEFS)
 #define __POLYRAY_PARAMETRIC_DEFS
 

@@ -2,7 +2,7 @@
 #define __POLYRAY_PARTICLE_DEFS
 
 
-Particle *CreateParticle(void);
+Particle *CreateParticle();
 void DeleteParticle(Particle *particle);
 Particle *CopyParticle(char *name);
 void InsertParticle(Particle *particle);
@@ -16,6 +16,6 @@ void SetParticleDeath(Particle *particle, NODE_PTR Death);
 void SetParticleCount(Particle *particle, NODE_PTR Count);
 void SetParticleObjName(Particle *particle, NODE_PTR obj_name);
 void InstantiateParticles(Viewpoint *Eye);
-void FreeParticles(void);
+void FreeParticles();
 
 #endif /* __POLYRAY_PARTICLE_DEFS */

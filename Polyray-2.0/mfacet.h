@@ -1,3 +1,4 @@
+#pragma once
 #if !defined(__MFACET_DEFS)
 #define __MFACET_DEFS
 

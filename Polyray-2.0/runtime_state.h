@@ -128,6 +128,11 @@ struct RenderSettings {
 		extern int             filebaseflag;
 		extern OUT_FORMAT      outformat;
 
+		extern int status_flag;   /* Set to 0 to eliminate status output */
+        extern int warnings_flag; /* Set to 0 to eliminate warning output */
+        extern int errors_flag;   /* Set to 0 to eliminate error output */
+
+
 		extern int     Check_Abort_Flag;
 		extern int     Abort_Flag;
 		extern jmp_buf abort_environ;

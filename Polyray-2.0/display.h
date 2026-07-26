@@ -2,10 +2,8 @@
 #define __DISPLAY_DEFS
 
 
-
-#ifdef __cplusplus
 namespace Global {
-#endif
+
 	/* Video resolutions and mode starting numbers */
 #define VIDEO_RESOLUTIONS 5
 #define FIRST_8BIT_MODE 1
@@ -21,9 +19,7 @@ namespace Global {
 	extern int Reset_Display_Flag;
 	extern int Display_x0, Display_y0, Display_xl, Display_yl;
 	extern int Dither_Flag;
-#ifdef __cplusplus
 }
-#endif
 
 /* Display routines */
 void display_init(Viewpoint *, char *);

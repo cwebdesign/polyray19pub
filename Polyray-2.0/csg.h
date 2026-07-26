@@ -5,19 +5,12 @@ void CSGDelete(Object*);
 
 int Inside_CSG_Node(csgnodeptr node, Vec W);
 
-#ifdef __cplusplus
-	extern "C" {
-#endif
 
-extern Object *MakeCSG(Object *, csgnodeptr);
-extern int Inside_CSG_Nodes(csgnodeptr, Vec);
-extern void set_parent_ptrs(csgnodeptr, csgnodeptr, Object *, Transform *,
+Object *MakeCSG(Object *, csgnodeptr);
+int Inside_CSG_Nodes(csgnodeptr, Vec);
+void set_parent_ptrs(csgnodeptr, csgnodeptr, Object *, Transform *,
                             bbox_info *);
-extern void instantiate_csg(BinTree *, csgnodeptr, int);
-
-#ifdef __cplusplus
-  }
-#endif
+void instantiate_csg(BinTree *, csgnodeptr, int);
 
 #endif /* __POLYRAY_CSG_DEFS */
 

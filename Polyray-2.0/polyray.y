@@ -1,23 +1,30 @@
 %{
 /*
 
+  Polyray - MIT Licensed Revival
   Copyright (C) 1993-1996, Alexander Enzmann, All rights reserved.
+  Copyright (C) 1999-2026, Clyde Meli, All rights reserved.
 
-  This software may be used for any private and non-commercial
-  use.
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation
+files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy,
+modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the 
+Software is furnished to do so, subject to the following conditions:
 
-  You may not distribute this software, in whole or in part,
-  for any commercial purpose, without the express consent of
-  the authors.
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the 
+Software.
 
-  There is no warranty or other guarantee of fitness of this software
-  for any purpose.  It is provided solely "as is".
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE 
+WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR 
+COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR 
+OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 */
-#include "defs.h"
-#include "io.h"
+#include <utility>
+#include "defs3.h"
+#include "object_dispatch.h"
+#include "io_ply.h"
 #include "memory.h"
-#include "psupport.h"
+#include "runtime_state.h"
 #include "symtab.h"
 #include "texture.h"
 #include "particle.h"
@@ -44,6 +51,7 @@
 #include "parametr.h"
 #include "poly.h"
 #include "polynom.h"
+#include "psupport.h"//for create_string
 #include "raw.h"
 #include "revolve.h"
 #include "sphere.h"
@@ -54,7 +62,7 @@
 
 #define ACTION(x) { if (check_condition()) { x } }
 #define alloca malloc
-#define yyerror error
+#define yyerror serror
 
 struct def_tok_struct {
    int type;
@@ -62,6 +70,8 @@ struct def_tok_struct {
    } temp_def;
 static Contour *cl, *contours;
 static int gcount;
+
+void start_include(std::string);
 %}
 
 %token ACCELERATION
@@ -337,6 +347,7 @@ static int gcount;
 %token GTEQ_SYM
 %token EQUAL_SYM
 %token NEQUAL_SYM
+%token NURB2
 
 %union {
    Vec vec;
@@ -419,7 +430,7 @@ element
      { ACTION(Add_To_Lights($<lgt>1);) }
    | haze_statement
    | object
-     { ACTION(Add_To_BinTree(&Root, $<obj>1);) }
+     { ACTION(Add_To_BinTree(RuntimeState::scene.Root, $<obj>1);) }
    | outfile
    | system_call
    | particle
@@ -428,8 +439,14 @@ element
 
 include_statement
    : INCLUDE STRING
-      { ACTION(include_file_action((char *)POLYRAY_PATH_STRING, $<name>2);)
-        polyray_free($<name>2); }
+      {
+          if ($<name>2 == nullptr)
+              serror("polyray.tab.cc::include_statement missing include name\n");
+
+          std::string sname{ $<name>2 };
+          ACTION(start_include(sname);)
+          polyray_free($<name>2);
+       }
    ;
 
 defined_token
@@ -451,25 +468,25 @@ defined_token
 
 definition_types
    : surface
-      { ACTION(temp_def.type = T_SURFACE;
+      { ACTION(temp_def.type = std::to_underlying(ShapeType::Surface);
                temp_def.data = $<surf>1;) }
    | texture
-      { ACTION(temp_def.type = T_TEXTURE;
+      { ACTION(temp_def.type = std::to_underlying(ShapeType::Texture);
                temp_def.data = $<text>1;) }
    | texture_map
-      { ACTION(temp_def.type = T_TEXTURE_MAP;
+      { ACTION(temp_def.type = std::to_underlying(ShapeType::Texture_Map);
                temp_def.data = $<text_map>1;) }
    | object
-      { ACTION(temp_def.type = T_OBJECT;
+      { ACTION(temp_def.type = std::to_underlying(ShapeType::Object);
                temp_def.data = $<obj>1;) }
    | transform
-      { ACTION(temp_def.type = T_TRANSFORM;
+      { ACTION(temp_def.type = std::to_underlying(ShapeType::Transform);
                temp_def.data = $<trns>1;) }
    | expression
-      { ACTION(temp_def.type = T_EXPRESSION;
+      { ACTION(temp_def.type = std::to_underlying(ShapeType::Expression);
                temp_def.data = $<exper>1;) }
    | particle
-      { ACTION(temp_def.type = T_PARTICLE;
+      { ACTION(temp_def.type = std::to_underlying(ShapeType::Particle);
                temp_def.data = $<part>1;) }
    ;
 
@@ -560,12 +577,12 @@ object_modifier_decls
 
 object_modifier_decl
    : texture
-      { ACTION(if (Object_Stack->element->o_texture != NULL)
+      { ACTION(if (Object_Stack->element->o_texture != nullptr)
                         TextureDelete(Object_Stack->element->o_texture);
                      Object_Stack->element->o_texture = $<text>1;) }
    | transform
       { ACTION(TransformObject(Object_Stack->element, $<trns>1);
-               polyray_free($<trns>1);) }
+               delete $<trns>1;) }
    | ROTATE point
       { ACTION(RotateObject(Object_Stack->element, $<vec>2);) }
    | ROTATE point ',' fexper
@@ -654,6 +671,7 @@ shape_decl
    | lathe
    | light_object
    | nurb
+   | nurb2
    | parabola
    | parametric
    | polygon
@@ -676,67 +694,67 @@ shape_decl
 
 camera_exper
    : ANGLE fexper
-     { ACTION(Eye.view_angle = degtorad($<flt>2/2.0 );) }
+     { ACTION(RuntimeState::scene.Eye.view_angle = degtorad($<flt>2/2.0 );) }
    | ANTIALIAS fexper
-     { ACTION(antialias = (int)$<flt>2;
-              if (antialias < 0 || antialias > 4)
-                 error("Antialias value of %d is not between 0 and 4",
-                       antialias);)}
+     { ACTION(RuntimeState::settings.antialias = (int)$<flt>2;
+              if (RuntimeState::settings.antialias < 0 || RuntimeState::settings.antialias > 4)
+                 serror("Antialias value of %d is not between 0 and 4",
+                       RuntimeState::settings.antialias);)}
    | ANTIALIAS_THRESHOLD fexper
-     { ACTION(antialias_threshold = $<flt>2;) }
+     { ACTION(RuntimeState::settings.antialias_threshold = $<flt>2;) }
    | APERTURE fexper
-     { ACTION(Eye.view_aperture = $<flt>2;) }
+     { ACTION(RuntimeState::scene.Eye.view_aperture = $<flt>2;) }
    | ASPECT fexper
-     { ACTION(Eye.view_aspect = $<flt>2;) }
+     { ACTION(RuntimeState::scene.Eye.view_aspect = $<flt>2;) }
    | AT point
-     { ACTION(VecCopy($<vec>2, Eye.view_at);) }
+     { ACTION(VecCopy($<vec>2, RuntimeState::scene.Eye.view_at);) }
    | FOCAL_DISTANCE fexper
-     { ACTION(Eye.view_focaldist = $<flt>2;) }
+     { ACTION(RuntimeState::scene.Eye.view_focaldist = $<flt>2;) }
    | FROM point
-     { ACTION(VecCopy($<vec>2, Eye.view_from);) }
+     { ACTION(VecCopy($<vec>2, RuntimeState::scene.Eye.view_from);) }
    | HITHER fexper
-     { ACTION(Eye.view_hither = $<flt>2;) }
+     { ACTION(RuntimeState::scene.Eye.view_hither = $<flt>2;) }
    | IMAGE_FORMAT fexper
      { ACTION(if ((int)($<flt>2) == 0)
-                 DepthRender = 0;
-              else if ((int)($<flt>2) == 1) {
-                 pixel_encoding = 0;
-                 DepthRender = 1;
-                 }
-              else
-                 error("image_format must be either 0 (normal) or 1 (depth)");
+                RuntimeState::settings.DepthRender = 0;
+             else if ((int)($<flt>2) == 1) {
+                RuntimeState::settings.pixel_encoding = 0;
+                RuntimeState::settings.DepthRender = 1;
+                }
+             else
+                serror("image_format must be either 0 (normal) or 1 (depth)");
               ) }
    | IMAGE_WINDOW fexper ',' fexper ',' fexper ',' fexper
-     { ACTION(Eye.view_x0 = (int) $<flt>2;
-              Eye.view_y0 = (int) $<flt>4;
-              Eye.view_xl = (int) $<flt>6;
-              Eye.view_yl = (int) $<flt>8;) }
+     { ACTION(RuntimeState::scene.Eye.view_x0 = (int) $<flt>2;
+              RuntimeState::scene.Eye.view_y0 = (int) $<flt>4;
+              RuntimeState::scene.Eye.view_xl = (int) $<flt>6;
+              RuntimeState::scene.Eye.view_yl = (int) $<flt>8;) }
    | MAX_SAMPLES fexper
-     { ACTION(maxsamples = (int)$<flt>2;
-              if (maxsamples < 0)
-                 error("maxsamples must be greater than 0");)}
+     { ACTION(RuntimeState::settings.maxsamples = (int)$<flt>2;
+              if (RuntimeState::settings.maxsamples < 0)
+                 serror("maxsamples must be greater than 0");)}
    | MAX_TRACE_DEPTH fexper
-     { ACTION(maxlevel = (int)$<flt>2;
-              if (maxlevel < 1 || maxlevel > 63)
-                 error("maxlevel must be between 1 and 63");)}
+     { ACTION(RuntimeState::settings.maxlevel = (int)$<flt>2;
+              if (RuntimeState::settings.maxlevel < 1 || RuntimeState::settings.maxlevel > 63)
+                 serror("maxlevel must be between 1 and 63");)}
    | PIXEL_ENCODING fexper
-     { ACTION(pixel_encoding = (int)$<flt>2;
-              if (pixel_encoding != 0 && pixel_encoding != 1)
-                 error("Pixel encoding of %d is not one of: 0 [none], 1 [RLE]",
-                       pixel_encoding);) }
+     { ACTION(RuntimeState::settings.pixel_encoding = (int)$<flt>2;
+              if (RuntimeState::settings.pixel_encoding != 0 && RuntimeState::settings.pixel_encoding != 1)
+                 serror("Pixel encoding of %d is not one of: 0 [none], 1 [RLE]",
+                       RuntimeState::settings.pixel_encoding);) }
    | PIXELSIZE fexper
-     { ACTION(pixelsize = (int)$<flt>2;
-              if (pixelsize != 8 && pixelsize != 16 &&
-                  pixelsize != 24 && pixelsize != 32)
-                 error("Pixelsize of %d is not one of: 8, 16, 24, 32",
-                       pixelsize);) }
+     { ACTION(RuntimeState::settings.pixelsize = (int)$<flt>2;
+              if (RuntimeState::settings.pixelsize != 8 && RuntimeState::settings.pixelsize != 16 &&
+                  RuntimeState::settings.pixelsize != 24 && RuntimeState::settings.pixelsize != 32)
+                 serror("Pixelsize of %d is not one of: 8, 16, 24, 32",
+                       RuntimeState::settings.pixelsize);) }
    | RESOLUTION fexper ',' fexper
-     { ACTION(Eye.view_xres = (int) $<flt>2;
-              Eye.view_yres = (int) $<flt>4;) }
+     { ACTION(RuntimeState::scene.Eye.view_xres = (int) $<flt>2;
+              RuntimeState::scene.Eye.view_yres = (int) $<flt>4;) }
    | UP point
-     { ACTION(VecCopy($<vec>2, Eye.view_up);) }
+     { ACTION(VecCopy($<vec>2, RuntimeState::scene.Eye.view_up);) }
    | YON fexper
-     { ACTION(Eye.view_yon = $<flt>2;) }
+     { ACTION(RuntimeState::scene.Eye.view_yon = $<flt>2;) }
    ;
 
 camera_expers
@@ -774,7 +792,7 @@ light_modifier_decl
    : COLOR expression
       { ACTION(Set_Light_Color($<exper>2);) }
    | SPHERE point ',' fexper
-      { ACTION(Translate_Light($<vec>2);
+      { ACTION(Translate_Light(toNuVec($<vec>2));
                Set_Light_Radius($<flt>4);) }
    | POLYGON fexper ',' fexper ',' fexper ',' fexper
       { ACTION(Set_Light_Polygon($<flt>2, $<flt>4, $<flt>6, $<flt>8);) }
@@ -785,9 +803,9 @@ light_modifier_decl
       '{' flare_options '}'
    | transform
       { ACTION(Transform_Light($<trns>1);
-               polyray_free($<trns>1);) }
+               delete $<trns>1;) }
    | ROTATE point
-      { ACTION(Rotate_Light($<vec>2);) }
+      { ACTION(Rotate_Light(toNuVec($<vec>2));) }
    | ROTATE point ',' fexper
       { ACTION(Rotate_Axis_Light($<vec>2, $<flt>4);) }
    | SHEAR fexper ',' fexper ',' fexper ',' fexper ','
@@ -795,7 +813,7 @@ light_modifier_decl
       { ACTION(Shear_Light($<flt>2, $<flt>4, $<flt>6,
                            $<flt>8, $<flt>10, $<flt>12);) }
    | TRANSLATE point
-      { ACTION(Translate_Light($<vec>2);) }
+      { ACTION(Translate_Light(toNuVec($<vec>2));) }
    | SCALE point
       { ACTION(Scale_Light($<vec>2);) }
    ;
@@ -849,17 +867,18 @@ light
      { ACTION($<lgt>$ = light_action2($<vec>3);
               Set_Light_Shadow(0);) }
    | SPOT_LIGHT point ',' point
-     { ACTION($<lgt>$ = SetSpotLight(White, $<vec>2, $<vec>4, 10.0, 30, 45);) }
+     { ACTION($<lgt>$ = SetSpotLight(RuntimeState::White, $<vec>2, $<vec>4, 10.0, 30, 45);) }
    | SPOT_LIGHT point ',' point ',' point ',' fexper ',' fexper ',' fexper
      { ACTION($<lgt>$ = SetSpotLight($<vec>2, $<vec>4, $<vec>6, $<flt>8,
                            $<flt>10, $<flt>12);) }
    | SPOT_LIGHT NO_SHADOW point ',' point
-     { ACTION($<lgt>$ = SetSpotLight(White, $<vec>3, $<vec>5, 10.0, 30, 45);
+     { ACTION($<lgt>$ = SetSpotLight(RuntimeState::White, $<vec>3, $<vec>5, 10.0, 30, 45);
               Set_Light_Shadow(0);) }
    | SPOT_LIGHT NO_SHADOW point ',' point ',' point ','
                           fexper ',' fexper ',' fexper
      { ACTION($<lgt>$ = SetSpotLight($<vec>3, $<vec>5, $<vec>7, $<flt>9,
-                           $<flt>11, $<flt>13);
+                           $<flt>1
+                           , $<flt>13);
               Set_Light_Shadow(0);) }
    | TEXTURED_LIGHT '{'
      { ACTION($<lgt>$ = light_action3();) }
@@ -901,11 +920,11 @@ surface_declaration
    | COLOR_MAP '(' map_entries ',' expression ')'
       { ACTION(color_map_action(CurrentSurface, $<cmap_entry>3, $<exper>5);) }
    | COLOR_MAP '(' map_entries ')'
-      { ACTION(color_map_action(CurrentSurface, $<cmap_entry>3, NULL);) }
+      { ACTION(color_map_action(CurrentSurface, $<cmap_entry>3, nullptr);) }
    | AMBIENT expression ',' expression
       { ACTION(ambient_action(CurrentSurface, $<exper>2, $<exper>4);) }
    | AMBIENT expression
-      { ACTION(ambient_action(CurrentSurface, NULL, $<exper>2);) }
+      { ACTION(ambient_action(CurrentSurface, nullptr, $<exper>2);) }
    | BRILLIANCE expression
       { ACTION(brilliance_action(CurrentSurface, $<exper>2);) }
    | BUMP_SCALE expression
@@ -913,7 +932,7 @@ surface_declaration
    | DIFFUSE expression ',' expression
       { ACTION(diffuse_action(CurrentSurface, $<exper>2, $<exper>4);) }
    | DIFFUSE expression
-      { ACTION(diffuse_action(CurrentSurface, NULL, $<exper>2);) }
+      { ACTION(diffuse_action(CurrentSurface, nullptr, $<exper>2);) }
    | FREQUENCY expression
       { ACTION(frequency_action(CurrentSurface, $<exper>2);) }
    | LOOKUP_FUNCTION expression
@@ -945,16 +964,16 @@ surface_declaration
    | REFLECTION expression ',' expression
       { ACTION(reflection_action(CurrentSurface, $<exper>2, $<exper>4);) }
    | REFLECTION expression
-      { ACTION(reflection_action(CurrentSurface, NULL, $<exper>2);) }
+      { ACTION(reflection_action(CurrentSurface, nullptr, $<exper>2);) }
    | SPECULAR expression ',' expression
       { ACTION(specular_action(CurrentSurface, $<exper>2, $<exper>4);) }
    | SPECULAR expression
-      { ACTION(specular_action(CurrentSurface, NULL, $<exper>2);) }
+      { ACTION(specular_action(CurrentSurface, nullptr, $<exper>2);) }
    | TRANSMISSION expression ',' expression ',' expression
       { ACTION(transmission_action(CurrentSurface, $<exper>2, $<exper>4,
                                    $<exper>6);) }
    | TRANSMISSION expression ',' expression
-      { ACTION(transmission_action(CurrentSurface, NULL,
+      { ACTION(transmission_action(CurrentSurface, nullptr,
                                    $<exper>2, $<exper>4);) }
    | TURBULENCE expression
       { ACTION(turbulence_action(CurrentSurface, $<exper>2);) }
@@ -1018,12 +1037,12 @@ texture_modifier_decls
 
 texture_modifier_decl
    : transform
-      { ACTION(if (Texture_Stack->element->t_trans == NULL)
+      { ACTION(if (Texture_Stack->element->t_trans == nullptr)
                   Texture_Stack->element->t_trans = $<trns>1;
                else {
-                  Compose_Transformations(Texture_Stack->element->t_trans,
-                                          $<trns>1);
-                  polyray_free($<trns>1);
+                  Compose_Transformations(*Texture_Stack->element->t_trans,
+                                          *$<trns>1);
+                  delete $<trns>1;
                   }) }
    | ROTATE point
       { ACTION(TextureRotate(Texture_Stack->element, $<vec>2);) }
@@ -1117,7 +1136,7 @@ bezier_points
    : bezier_points ',' point
       { ACTION($<vecl>$ = add_bezier_point($<vecl>1, $<vec>3);) }
    | point
-      { ACTION($<vecl>$ = add_bezier_point(NULL, $<vec>1);) }
+      { ACTION($<vecl>$ = add_bezier_point(nullptr, $<vec>1);) }
    ;
 
 bezier
@@ -1133,7 +1152,7 @@ blob
      blobelements
      { ACTION(MakeBlob(Object_Stack->element, $<flt>2,
                        blob_components, npoints, 1);
-              blob_components = NULL; npoints = 0;) }
+              blob_components = nullptr; npoints = 0;) }
    ;
 
 blobelements
@@ -1180,26 +1199,26 @@ csg_tree
       { ACTION($<csgtree>$ = $<csgtree>2;) }
    | csg_tree '+' csg_tree
       { ACTION($<csgtree>$ =
-                  make_csg_node(T_UNION, $<csgtree>1, $<csgtree>3);) }
+                  make_csg_node(std::to_underlying(ShapeType::Union), $<csgtree>1, $<csgtree>3);) }
    | csg_tree '-' csg_tree
       { ACTION($<csgtree>$ =
-                  make_csg_node(T_INTERSECTION, $<csgtree>1,
-                                make_csg_node(T_INVERSE, $<csgtree>3, NULL));) }
+                  make_csg_node(Sstd::to_underlying(ShapeType::Intersection), $<csgtree>1,
+                                make_csg_node(std::to_underlying(ShapeType::Inverse), $<csgtree>3, nullptr));) }
    | csg_tree '*' csg_tree
       { ACTION($<csgtree>$ =
-                  make_csg_node(T_INTERSECTION, $<csgtree>1, $<csgtree>3);) }
+                  make_csg_node(std::to_underlying(ShapeType::Intersection), $<csgtree>1, $<csgtree>3);) }
    | '~' csg_tree
       { ACTION($<csgtree>$ =
-                  make_csg_node(T_INVERSE, $<csgtree>2, NULL);) }
+                  make_csg_node(std::to_underlying(ShapeType::Inverse), $<csgtree>2, nullptr);) }
    | csg_tree '&' csg_tree
       { ACTION($<csgtree>$ =
-                  make_csg_node(T_CLIP, $<csgtree>1, $<csgtree>3);) }
+                  make_csg_node(std::to_underlying(ShapeType::Clip), $<csgtree>1, $<csgtree>3);) }
    | csg_tree '^' csg_tree
       { ACTION($<csgtree>$ =
-                  make_csg_node(T_MERGE, $<csgtree>1, $<csgtree>3);) }
+                  make_csg_node(std::to_underlying(ShapeType::Merge), $<csgtree>1, $<csgtree>3);) }
    | object
       { ACTION($<csgtree>$ =
-                  make_csg_node(T_BASE_OBJECT, $<obj>1, NULL);) }
+                  make_csg_node(std::to_underlying(ShapeType::Base_Object, $<obj>1, nullptr);) }
    ;
 
 cylinder
@@ -1252,15 +1271,15 @@ gridded
 object_list
    : object
       { ACTION(ostackptr ost =
-                     polyray_malloc(sizeof(struct object_stack_struct));
-                if (ost == NULL) error("Failed to allocate grid object");
+                     (ostackptr)polyray_malloc(sizeof(struct object_stack_struct));
+                if (ost == nullptr) serror("Failed to allocate grid object");
                 ost->element = $<obj>1;
-                ost->next    = NULL;
+                ost->next    = nullptr;
                 $<objlist>$  = ost;) }
    | object_list object
       { ACTION(ostackptr ost =
-                     polyray_malloc(sizeof(struct object_stack_struct));
-                if (ost == NULL) error("Failed to allocate grid object");
+                     (ostackptr)polyray_malloc(sizeof(struct object_stack_struct));
+                if (ost == nullptr) serror("Failed to allocate grid object");
                 ost->element = $<obj>2;
                 ost->next    = $<objlist>1;
                 $<objlist>$  = ost;) }
@@ -1294,7 +1313,7 @@ lathe
    : LATHE fexper ',' point ',' fexper  ','
    { ACTION(npoints = (int)$<flt>6;
             plist = (fVec *)polyray_malloc((int)$<flt>6 * sizeof(fVec));
-            if (plist == NULL) error("Failed to allocate lathe data\n");
+            if (plist == nullptr) serror("Failed to allocate lathe data\n");
             pl = plist;) }
    pointlist 
    { ACTION(MakeRevolve(Object_Stack->element, (int)$<flt>2,
@@ -1315,8 +1334,16 @@ nurb
    | NURB fexper ',' fexper ',' fexper ',' fexper ','
           expression
    { ACTION(MakeNurb(Object_Stack->element, (int)$<flt>2, (int)$<flt>4,
-                     (int)$<flt>6, (int)$<flt>8, NULL, NULL,
+                     (int)$<flt>6, (int)$<flt>8, nullptr, nullptr,
                      $<exper>10);) }
+   ;
+
+nurb2
+   : NURB2 fexper ',' fexper ',' fexper ',' fexper ','
+          expression ',' expression ',' expression ',' expression
+   { ACTION(MakeNurbTrimmed(Object_Stack->element, (int)$<flt>2, (int)$<flt>4,
+                            (int)$<flt>6, (int)$<flt>8, $<exper>10, $<exper>12,
+                            $<exper>14, $<exper>16);) }
    ;
 
 parabola
@@ -1334,9 +1361,9 @@ polygon:
    POLYGON fexper  ','
    { ACTION(npoints = (int)$<flt>2;
             if (npoints < 3)
-               error("polygons must have at least 3 sides\n");
+               serror("polygons must have at least 3 sides\n");
             plist = (fVec *)polyray_malloc((int)$<flt>2 * sizeof(fVec)) ;
-            if (plist == NULL) error("Failed to allocate polygon data\n");
+            if (plist == nullptr) serror("Failed to allocate polygon data\n");
             pl = plist;) }
    pointlist 
    { ACTION(MakePoly(Object_Stack->element, (int)$<flt>2, plist);) }
@@ -1470,12 +1497,12 @@ contour
    : CONTOUR fexper  ','
       { ACTION(npoints = (int)$<flt>2;
                if (npoints < 2)
-                  error("contours must have at least 3 sides\n");
+                  serror("contours must have at least 3 sides\n");
                plist = (fVec *)polyray_malloc(((int)$<flt>2 + 1) * sizeof(fVec));
-               if (plist == NULL) error("Failed to allocate contour data\n");
+               if (plist == nullptr) serror("Failed to allocate contour data\n");
                pl = plist;) }
      pointlist 
-      { ACTION(if (gcount == 0) error("Too many contours for the glyph\n");
+      { ACTION(if (gcount == 0) serror("Too many contours for the glyph\n");
                cl->count = (int)$<flt>2;
                cl->points = plist;
                gcount--; cl++;) }
@@ -1490,14 +1517,14 @@ glyph
    : GLYPH fexper
       { ACTION(gcount = (int)$<flt>2;
                if (gcount < 1)
-                  error("Glyphs must have at least one contour");
-               contours = polyray_malloc(gcount * sizeof(Contour));
-               if (contours == NULL)
-                  error("Failed to allocate glyph data");
+                  serror("Glyphs must have at least one contour");
+               contours = (Contour*)polyray_malloc(gcount * sizeof(Contour));
+               if (contours == nullptr)
+                  serror("Failed to allocate glyph data");
                cl = contours;) }
      glyph_contours
       { ACTION(if (gcount != 0)
-                  error("Wrong number of contours in glyph\n");
+                  serror("Wrong number of contours in glyph\n");
                MakeGlyph(Object_Stack->element, (int)$<flt>2, contours);) }
    ;
 
@@ -1505,7 +1532,7 @@ sweep
    : SWEEP fexper  ',' point ',' fexper ','
    { ACTION(npoints = (int)$<flt>6;
             plist = (fVec *)polyray_malloc((int)$<flt>6 * sizeof(fVec));
-            if (plist == NULL) error("Failed to allocate sweep data\n");
+            if (plist == nullptr) serror("Failed to allocate sweep data\n");
             pl = plist;) }
    pointlist 
    { ACTION(MakeSweep(Object_Stack->element, (int)$<flt>2,
@@ -1521,45 +1548,48 @@ torus
 fexper
    : expression
       { ACTION(Flt ftmp; Vec vtmp; NODE_PTR tnode;
-               if (eval_node(NULL, $<exper>1, &ftmp, vtmp, &tnode) == 1) {
+               if (eval_node(nullptr, $<exper>1, &ftmp, vtmp, &tnode) == 1) {
                   deallocate_node($<exper>1);
                   $<flt>$ = ftmp;
                   }
                else {
-                  error("Bad fexper expression\n");
+                  serror("Bad fexper expression\n");
                   }) }
    ;
 
 point
    : expression
       { ACTION(Flt ftmp; Vec vtmp; NODE_PTR tnode;
-               if (eval_node(NULL, $<exper>1, &ftmp, vtmp, &tnode) == 2) {
+               if (eval_node(nullptr, $<exper>1, &ftmp, vtmp, &tnode) == 2) {
                   VecCopy(vtmp, $<vec>$);
                   deallocate_node($<exper>1);
                   }
                else {
-                  error("Bad point expression\n");
+                  serror("Bad point expression\n");
                   }) }
    ;
 
 sexper
    : expression
-      { ACTION(char *stmp;
-               if (create_string($<exper>1, &stmp)) {
+      { ACTION(std::string stmp;
+               if (create_string($<exper>1, stmp)) {
                   deallocate_node($<exper>1);
-                  $<name>$ = stmp;
+                  $<name>$ = static_cast<char*>(polyray_malloc(stmp.length() + 1));
+                  if ($<name>$ == nullptr)
+                     serror("Failed to allocate sexper string\n");
+                  memcpy($<name>$, stmp.c_str(), stmp.length() + 1);                  
                   }
                else {
-                  error("Bad sexper expression\n");
+                  serror("Bad sexper expression\n");
                   }) }
    ;
 
 pointlist
    : point
-     { ACTION(if (npoints==0) error("Too many points for the polygon\n");
+     { ACTION(if (npoints==0) serror("Too many points for the polygon\n");
               VecCopy($<vec>1, (*pl)); npoints--; pl++;) }
    | pointlist ',' point
-     { ACTION(if (npoints==0) error("Too many points for the polygon\n");
+     { ACTION(if (npoints==0) serror("Too many points for the polygon\n");
               VecCopy($<vec>3, (*pl)); npoints--; pl++;) }
    ;
 
@@ -1603,26 +1633,26 @@ expression
    | COLOR_MAP '(' map_entries ',' expression ')'
       { ACTION($<exper>$ = make_cmap_node($<cmap_entry>3, $<exper>5);) }
    | COLOR_MAP '(' map_entries ')'
-      { ACTION($<exper>$ = make_cmap_node($<cmap_entry>3, NULL);) }
+      { ACTION($<exper>$ = make_cmap_node($<cmap_entry>3, nullptr);) }
    | NOISE '(' expression ')'
-      { ACTION($<exper>$ = make_node(NOISE, $<exper>3, NULL);) }
+      { ACTION($<exper>$ = make_node(NOISE, $<exper>3, nullptr);) }
    | NOISE '(' expression ',' expression ')'
       { ACTION($<exper>$ = make_node(NOISE, $<exper>3, $<exper>5);) }
    | ROTATE '(' expression ',' expression ')'
-      { ACTION($<exper>$ = make_fn3_node(ROTATE, $<exper>3, $<exper>5, NULL);) }
+      { ACTION($<exper>$ = make_fn3_node(ROTATE, $<exper>3, $<exper>5, nullptr);) }
    | ROTATE '(' expression ',' expression ',' expression ')'
       { ACTION($<exper>$ = make_fn3_node(ROTATE, $<exper>3, $<exper>5,
                                          $<exper>7);) }
    | COLOR
-      { ACTION($<exper>$ = make_node(COLOR, NULL, NULL);) }
+      { ACTION($<exper>$ = make_node(COLOR, nullptr, nullptr);) }
    | FRAME
-      { ACTION($<exper>$ = make_node(FRAME, NULL, NULL);) }
+      { ACTION($<exper>$ = make_node(FRAME, nullptr, nullptr);) }
    | END_FRAME
-      { ACTION($<exper>$ = make_node(END_FRAME, NULL, NULL);) }
+      { ACTION($<exper>$ = make_node(END_FRAME, nullptr, nullptr);) }
    | START_FRAME
-      { ACTION($<exper>$ = make_node(START_FRAME, NULL, NULL);) }
+      { ACTION($<exper>$ = make_node(START_FRAME, nullptr, nullptr);) }
    | TOTAL_FRAMES
-      { ACTION($<exper>$ = make_node(TOTAL_FRAMES, NULL, NULL);) }
+      { ACTION($<exper>$ = make_node(TOTAL_FRAMES, nullptr, nullptr);) }
    | TOKEN '(' expression_list ')'
       { ACTION($<exper>$ = check_term($<name>1, $<elist>3);)
         polyray_free($<name>1); }
@@ -1663,7 +1693,7 @@ conditional
    | conditional OR_SYM conditional
       { ACTION($<exper>$ = make_node(OR_EXPER, $<exper>1, $<exper>3);) }
    | '!' conditional
-      { ACTION($<exper>$ = make_node(NOT_EXPER, $<exper>1, NULL);) }
+      { ACTION($<exper>$ = make_node(NOT_EXPER, $<exper>1, nullptr);) }
    ;
 
 map_entry
@@ -1695,36 +1725,36 @@ frame_decl
 
 end_frame_decl
    : END_FRAME fexper
-      { ACTION(end_frame = (int)$<flt>2;) }
+      { ACTION(RuntimeState::animator.end_frame = (int)$<flt>2;) }
    ;
 
 start_frame_decl
    : START_FRAME fexper
-      { ACTION(start_frame = (int)$<flt>2;
-               if (!Parsed_Flag) current_frame = start_frame;) }
+      { ACTION(RuntimeState::animator.start_frame = (int)$<flt>2;
+               if (!RuntimeState::Parsed_Flag) RuntimeState::animator.current_frame = RuntimeState::animator.start_frame;) }
    ;
 
 total_frames_decl
    : TOTAL_FRAMES fexper
-      { ACTION(total_frames = (int)$<flt>2;) }
+      { ACTION(RuntimeState::animator.total_frames = (int)$<flt>2;) }
    ;
 
 frame_time_decl
    : FRAME_TIME fexper
-      { ACTION(frame_time = $<flt>2;) }
+      { ACTION(RuntimeState::animator.frame_time = $<flt>2;) }
    ;
 
 outfile
    : OUTFILE TOKEN
-      { ACTION(if (!Parsed_Flag) {
-                  strcpy(outfilebase, $<name>2);
-                  filebaseflag = 1;
+      { ACTION(if (!RuntimeState::Parsed_Flag) {
+                  RuntimeState::outfilebase = $<name>2;
+                  RuntimeState::filebaseflag = 1;
                   })
         polyray_free($<name>2); }
    | OUTFILE STRING
-      { ACTION(if (!Parsed_Flag) {
-                  strcpy(outfilebase, $<name>2);
-                  filebaseflag = 1;
+      { ACTION(if (!RuntimeState::Parsed_Flag) {
+                  RuntimeState::outfilebase = $<name>2;
+                  RuntimeState::filebaseflag = 1;
                   })
         polyray_free($<name>2); }
    ;
@@ -1755,7 +1785,7 @@ if_statement
    : IF '(' conditional ')'
       { Flt ftmp; Vec vtmp; NODE_PTR tnode;
         if (check_condition()) {
-           if (eval_node(NULL, $<exper>3, &ftmp, vtmp, &tnode) == 1 &&
+           if (eval_node(nullptr, $<exper>3, &ftmp, vtmp, &tnode) == 1 &&
                ftmp != 0.0) {
               condition_flags[++condition_depth] = 1;
               }

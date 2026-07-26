@@ -1,3 +1,4 @@
+#pragma once
 #ifndef __LIGHT_DEFS
 #define __LIGHT_DEFS
 #include "defs3.h"
@@ -16,10 +17,10 @@ ShadRet Shadow(Viewpoint* eye, Light* light, Ray* ray,
     Flt radius);
 //extern int Shadow(Viewpoint*, Light*, Ray*, Flt, Flt, Flt, Vec);
 
-void Initialize_Light_Caches(void);
+void Initialize_Light_Caches();
 Object* Get_Light_Blocker(Light* light, int depth);
 void Set_Light_Blocker(Light* light, int depth, Object* obj);
-void Terminate_Light_Caches(void);
+void Terminate_Light_Caches();
 void Set_Light_Shadow(int);
 void Set_Light_Color(NODE_PTR);
 void Set_Light_Radius(Flt);
@@ -34,10 +35,10 @@ void Rotate_Axis_Light(Vec, Flt);
 void Scale_Light(Vec);
 Light* light_action1(Vec, Vec);
 Light* light_action2(Vec);
-Light* light_action3(void);
+Light* light_action3();
 Light* light_action4(Vec);
 Light* light_action5(Vec, Vec);
-Light* light_action6(void);
+Light* light_action6();
 void DepthLight3(Vec);
 void DepthLight6(Vec);
 void DepthLight7(Vec);
@@ -51,12 +52,12 @@ void DepthLight2(Flt);
 void DepthLight4(NODE_PTR);
 void DepthLight5(char*);
 
-void DepthLight8(void);
+void DepthLight8();
 void DepthLight9(Flt);
 
 
-void Initialize_Lights(void);
-void Deallocate_Lights(void);
+void Initialize_Lights();
+void Deallocate_Lights();
 void Add_To_Lights(Light* light);
 Object* MakeLight(Object* object, Light* light);
 Light* Copy_Light(Light* light, Transform* tx);

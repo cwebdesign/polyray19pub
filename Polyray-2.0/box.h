@@ -2,16 +2,10 @@
 #define __POLYRAY_BOX_DEFS
 
 
-extern void BoxDelete(Object* object);
-#ifdef __cplusplus
-	extern "C" {
-#endif
+void BoxDelete(Object* object);
 
-extern Object *MakeBox(Object *, Vec, Vec);
+Object *MakeBox(Object *, Vec, Vec);
 
-#ifdef __cplusplus
-  }
-#endif
 
 #endif /* __POLYRAY_BOX_DEFS */
 

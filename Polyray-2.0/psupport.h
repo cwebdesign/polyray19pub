@@ -47,17 +47,17 @@ extern void ScaleObject(Object *, Vec);
 extern int C_create_string(NODE_PTR exper, char **name);
 
 
-extern void surface_action1(void);
+extern void surface_action1();
 extern void surface_action2(char *);
 extern void push_texture(Texture *text);
-extern Transform * transform_action1(void);
+extern Transform * transform_action1();
 extern Transform * transform_action2(char *);
 extern void translate_transform(Transform *, Vec);
 extern void rotate_transform(Transform *, Vec);
 extern void axis_rotate_transform(Transform *, Vec, Flt);
 extern void scale_transform(Transform *, Vec);
-extern Texture *pop_texture(void);
-extern Texture *texture_action1(void);
+extern Texture *pop_texture();
+extern Texture *texture_action1();
 extern Texture *texture_action2(char *);
 extern tstackptr texture_list_action1(Texture *);
 extern tstackptr texture_list_action2(tstackptr, Texture *);

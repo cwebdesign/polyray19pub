@@ -12,23 +12,14 @@ NODE_PTR make_environ_nodemock(char* file0, char* file1, char* file2,
 std::string lookup_fn(int fntype);
 void show_cmap_node(map_entries cnode);
 void show_array_node(LIST_PTR list);
-#ifdef __cplusplus
-extern "C" {
-	
-#endif
 
-#ifdef __cplusplus
-}
-#endif
+
 #endif//TESTING
 
-#ifdef __cplusplus
 #include <memory>
 extern NODE_PTR make_string_node(std::string); //char *);
 //extern std::unique_ptr<exper_str> copy_string_node_new(std::unique_ptr<exper_str> ptr);
 
-	extern "C" {
-#endif
 	//extern NODE_PTR simplify(NODE_PTR, int);//in simplify? conflicts
 
 
@@ -62,9 +53,6 @@ extern void deallocate_cmap_node(map_entries);
 extern void delete_draw_nodes(DrawNode *);
 extern DrawNode *make_draw_node(Flt, Flt, int, NODE_PTR, NODE_PTR);
 
-#ifdef __cplusplus
-  }
-#endif
 
 
 #endif /* __POLYRAY_BUILDER_DEFS */
