@@ -181,7 +181,7 @@ openpolyray::polyray_pause();
 	             //    openpolyray::polyray_pause();
 				 //}
 	             yyterminate();//return 1;
-	          }	          
+	          }
 	          File_Name_Depth--;
 	          //if ( yy_flex_debug ) printf("going to file %d\n",File_Name_Depth-1);
 	          CurrentFileName = File_List[File_Name_Depth-1].name;
@@ -189,7 +189,7 @@ openpolyray::polyray_pause();
 	          //  printf("prev yylineno=%d in %d\n",File_List[File_Name_Depth-1].line,File_Name_Depth-1);
 	          //  printf("CurrentFileName is now %s\n",CurrentFileName);
 		      //} //if yy flex debug
-	          
+
               yyin = File_List[File_Name_Depth - 1].file;
               yyrestart(File_List[File_Name_Depth-1].file);//flex
 
@@ -209,8 +209,8 @@ openpolyray::polyray_pause();
 				//  printf("restored yylineno=%d, returning\n",yylineno);
 	             // openpolyray::polyray_pause();
 			  //} //end if yy flex debug
-	          
-            
+
+
             //return 0; -- this doesnt work if I return 0, it stops parsing after the include file ends.
 	          }
 
@@ -529,7 +529,7 @@ int lookup(void)
 #ifdef DEBUG_FN_CALLS
 
 if (yytext == nullptr) {
-    
+
     exit(2);
 }
 
@@ -562,12 +562,12 @@ if (yytext == nullptr) {
       //memcpy(strtmp, yytext, l1+1);
       strtmp = yytext;
       yylval.name = myCopy(strtmp);// (char*)strtmp.c_str();//the only way to do it, sadly
-      
+
       //smessage("returning token\n");
       return TOKEN;
       }
    else {
-   
+
       Lookup_Definition((char*)syyt.c_str(), &c, &d);
       switch (c) {
       case std::to_underlying(ShapeType::Object):
@@ -616,7 +616,7 @@ smessage("lex.yy.cpp::copy_yystring\n");
    memcpy(strtmp, &yytext[1], len-2);
    strtmp[len-2] = '\0';
    yylval.name = strtmp;
-   
+
    return STRING;
 }
 
@@ -654,12 +654,8 @@ void start_include(std::string name)
 
 	//openpolyray::polyray_pause();
 	#endif
-   
-   char myenviron[]="c:\\polyray\0";
 
-//environ=&myenviron[0];//real environ is buggy? so have to ignore it 2006 version
-//printf("could not copy environ\n");
-//printf("environ=%s\n",myenviron);
+   char myenviron[]="c:\\polyray\0";
 
    if (File_Name_Depth > MAX_FILE_DEPTH) {
        serror("Include files nested too deep\n");
@@ -671,48 +667,30 @@ void start_include(std::string name)
 
    /* Now that we have the name of the include file, we
       stash it away for when the EOF is reached. */
-   File_List[File_Name_Depth].file = PathFileOpen(NULL, name, "rt"); // was environ,name,"rt"
+   File_List[File_Name_Depth].file = PathFileOpen(nullptr, name, "rt"); // was environ,name,"rt"
    if (File_List[File_Name_Depth].file == nullptr) {
        swarning("Failed to open include file: '");
        swarning(name);
        swarning("'\n");
    }
    else {
-      
+
       #ifdef DEBUG
       printf("saving yylineno=%d in [%d]\n",yylineno, File_Name_Depth-1);
       #endif
       File_List[File_Name_Depth-1].line = yylineno;
       File_List[File_Name_Depth].name = name;
 
-      //printf("checking yylineno=%d\n",File_List[File_Name_Depth-1].line);
       yyin = File_List[File_Name_Depth].file;
       CurrentFileName = name;
-      //printf("file opened, current filename is %s\n", (char*)CurrentFileName.c_str());
-
-//YY_BUFFER_STATE temp = YY_CURRENT_BUFFER;
-//yy_scan_string(strtmp);
-//yyparse();
-//yy_delete_buffer(YY_CURRENT_BUFFER);
-//yy_switch_to_buffer(temp);
-
-      //yyin = fopen( CurrentFileName, "r" );
-      //if (!yyin) error("error opening include file");
-      //yypush_buffer_state(yy_create_buffer( yyin,  YY_BUF_SIZE )); flex
       RuntimeState::oldbuf = YY_CURRENT_BUFFER;
-      //reflex::Input input(...);
       RuntimeState::newbuf = yy_create_buffer(yyin, YY_BUF_SIZE);
       yy_switch_to_buffer(RuntimeState::newbuf);
-      //printf("buffer pushed\n");
 
 
       Beginagain();    //
-       //BEGIN(INITIAL);
-
-      //yylineno = 1;
       YY_SCANNER.lineno(1);
-      //printf("yylineno=%d\n",yylineno);
+
       File_Name_Depth++;
-      //openpolyray::polyray_pause();
       }
 }
