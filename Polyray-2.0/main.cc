@@ -474,7 +474,7 @@ static void read_defaults(const int argc, const char **argv, std::string& outfil
          break ;
       case 't':
           RuntimeState::settings.tickflag = stoi(_getopt.GetOptarg1());
-         if (RuntimeState::settings.tickflag == 0) status_flag = 0;
+         if (RuntimeState::settings.tickflag == 0) RuntimeState::status_flag = 0;
          break;
       case 'u':
           runtimeState::settings.pixel_encoding = 0;

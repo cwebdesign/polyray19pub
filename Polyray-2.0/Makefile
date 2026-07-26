@@ -268,7 +268,7 @@ image_decoder.$(OBJ): image_decoder.cc image_decoder.h include/defs3.h image.h j
 
 intersec.$(OBJ): intersec.cc intersec.h include/defs3.h bound.h vector.h csg.h symtab.h shade.h roots.h runtime_state.h display_backend.h
 
-io.$(OBJ): io.cc io_ply.h memory.h
+io.$(OBJ): io.cc io_ply.h memory.h runtime_state.h util.h
 
 jpeg.$(OBJ): jpeg.cc jpeg.h include/defs3.h io_ply.h memory.h
 
@@ -299,7 +299,7 @@ pexper.$(OBJ): pexper.cc include/defs3.h polyray.tab.h io_ply.h memory.h builder
 
 pic.$(OBJ): pic.cc pic.h include/defs3.h io_ply.h memory.h display.h jpeg.h runtime_state.h display_backend.h
 
-pngread.$(OBJ): pngread.cc pngread.h pngerrs.h include/defs3.h io_ply.h memory.h jpeg.h lodepng.h
+pngread.$(OBJ): pngread.cc pngread.h include/defs3.h io_ply.h memory.h jpeg.h lodepng.h
 
 poly.$(OBJ): poly.cc poly.h include/defs3.h io_ply.h memory.h intersec.h symtab.h scan.h vector.h roots.h
 
@@ -343,7 +343,7 @@ vec2.$(OBJ): vec2.cc vec2.h include/defs3.h
 # May need to turn off optimization when compiling scan.c using GCC - it
 # seems to lock up for some data files.
 #
-scan.$(OBJ): scan.cc scan.h include/defs3.h memory.h io_ply.h display.h vector.h eval.h csg.h symtab.h shade.h runtime_state.h
+scan.$(OBJ): scan.cc scan.h include/defs3.h memory.h io_ply.h display.h vector.h eval.h csg.h symtab.h shade.h runtime_state.h image.h util.h vec3.h factory.h
 
 #	$(CC) $(CFLAGS) $(BIN_FLG) $(DEBUG_MEM) scan.c
 

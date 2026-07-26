@@ -36,14 +36,23 @@ OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 /* Basis matrices for: Bezier, B-Spline, Catmull-Rom, and Hermite.  Note that
    for the first three, the vectors P0 - P3 are used.  For the last (Hermite)
    two vectors P0, P3 and two tangents R0, R3 are used.  */
-static Matrix BZM = {{-1, 3,-3, 1}, { 3,-6, 3, 0},
-                     {-3, 3, 0, 0}, { 1, 0, 0, 0}};
-static Matrix BSM = {{-1, 3,-3, 1}, { 3,-6, 3, 0},
-                     {-3, 0, 3, 0}, { 1, 4, 1, 0}};
-static Matrix CRM = {{-1, 3,-3, 1}, { 2,-5, 4,-1},
-                     {-1, 0, 1, 0}, { 0, 2, 0, 0}};
-static Matrix HRM = {{ 2,-2, 1, 1}, {-3, 3,-2,-1},
-                     { 0, 0, 1, 0}, { 1, 0, 0, 0}};
+static NuMatrix4 BZM = {{
+    {-1, 3,-3, 1}, { 3,-6, 3, 0},
+    {-3, 3, 0, 0}, { 1, 0, 0, 0}
+}};
+static NuMatrix4 BSM = {{
+    {-1, 3,-3, 1}, { 3,-6, 3, 0},
+    {-3, 0, 3, 0}, { 1, 4, 1, 0}
+}};
+static NuMatrix4 CRM = {{
+    {-1, 3,-3, 1}, { 2,-5, 4,-1},
+    {-1, 0, 1, 0}, { 0, 2, 0, 0}
+}};
+static NuMatrix4 HRM = {{
+    { 2,-2, 1, 1}, {-3, 3,-2,-1},
+    { 0, 0, 1, 0}, { 1, 0, 0, 0}
+}};
+
 
 /* Representation of a bicubic patch is:
       Q(t) = S . M . G . Mt . Tt
@@ -214,8 +223,8 @@ static void BezierNormal(BezierData *shape, Flt u0, Flt v0, Vec P, Vec N)
 void BezierNormalTest(void)
 {
     BezierData* test1 = FactoryBezierData();
-    for (int i=0;i<=5;i++) {
-       test1->patch_type=i;
+    for (int pt=0;pt<=5;pt++) {
+       test1->patch_type=pt;
        for (int i=0;i<4;i++)
          for (int j=0;j<4;j++)
          {
@@ -418,7 +427,7 @@ Object *MakeNurb(Object *object, int norder, int npts, int morder, int mpts,
       open uniform knot vector */
    if (haveknots) {
       auto ltemp1=std::get<LIST_PTR>(nknots->exper_data);
-      for (i=0;ltemp1!=nullptr;ltemp1=ltemp1->next,i++) {
+      for (i=0;ltemp1!=nullptr;ltemp1=ltemp1->next,++i) {
          if (eval_node(nullptr, ltemp1->element, &fval, vval, &nval) != 1)
             serror("Knot value isn't a floating point number");
          ndata->nknotvec[i] = fval;
@@ -426,7 +435,7 @@ Object *MakeNurb(Object *object, int norder, int npts, int morder, int mpts,
       }
    else {
       ndata->nknotvec[0] = 0.0;
-      for (i=1;i<ndata->nknots;i++)
+      for (i=1;i<ndata->nknots;++i)
          if (i >= norder && i < npts + 1)
             ndata->nknotvec[i] = ndata->nknotvec[i-1] + 1;
          else
