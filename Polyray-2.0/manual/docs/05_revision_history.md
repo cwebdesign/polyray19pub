@@ -1,13 +1,24 @@
 # 5 Revision History
 
-### Version 2.0 
-"C++" Build 
-Relesed ..
-Various changes to the code now compiling under C++, modernisation and refactoring
-When evaluating Sturm, we first try guarded, bracket-saf Newton-Raphson
-NURBS2 introduced - this handles trim curves.
-Polygon subdivision code has been modernised.
-Colinear triangles are able to be detected. This is configurable, the default is not to detect them for compatibility.
+### Version 2.0.0prealpha
+"Bowie" Build (named after David Bowie)
+Released xxth July 2026
+The first C++ version of Polyray to be released.
+
+Replaced C-style constructs with C++ equivalents — e.g. migrated from printf to std::cout, NULL to nullptr, and header guards to include #pragma once.
+
+Modernised macro patterns to functions — converted various macros to proper C++ functions, reducing preprocessor dependencies.
+Adopted modern C++ features — introduced enum classes and other enumerations for type safety and namespace isolation, as well as memory allocation changed from polyray_malloc to
+Use Factory functions (currently using new).
+
+Cleaned up legacy code — removed scaffolding and refactored toward C++23 standards while maintaining functional equivalence across the renderer pipeline.
+
+Polyray's C++ version builds on Windows (MSYS2,Visual Studio), Linux and MacOS using SDL to show the current render. It also builds without SDL on Tribblix (a Unix distribution).
+
+Not using stl library anymore. Using lodepng library to handle png images.
+
+Unit testing covers most of Polyray, using Google Test.
+
 
 ### Version 1.9.4
 "Bella" Build (named after Malta's Eurovision 2026 Entry)
