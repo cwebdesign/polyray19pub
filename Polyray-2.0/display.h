@@ -4,7 +4,19 @@
 
 namespace Global {
 
-	/* Video resolutions and mode starting numbers */
+/* Video resolutions and mode starting numbers
+ * 
+ * DEPRECATED MODES (no effect on modern platforms):
+ * - Modes 1–5 (8-bit palette), 6–10 (15-bit), 11–15 (16-bit), 21–25 (4-bit EGA)
+ * - These are remnants of DOS/VGA-era graphics programming.
+ * - SDL3 handles resolution dynamically; hardware video modes don't exist.
+ * 
+ * ACTIVE MODE:
+ * - Modes 16–20: 24-bit TrueColor (de facto modern standard, rarely used)
+ * 
+ * All modes map to SDL3's dynamic window rendering; the color depth
+ * specified by -V has no practical effect on output.
+ */
 #define VIDEO_RESOLUTIONS 5
 #define FIRST_8BIT_MODE 1
 #define FIRST_HICOLOR_MODE (FIRST_8BIT_MODE + VIDEO_RESOLUTIONS)

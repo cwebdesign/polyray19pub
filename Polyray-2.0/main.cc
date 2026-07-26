@@ -118,7 +118,7 @@ fflush(message_log);
 hitanykey();
 smessage("\n Rendering options:\n"\
 "     -r method          [ Render: 0=Ray,1=Scan,2=Wire,3=Hidden  ]\n"\
-"                        [         4=Gourad,5=Raw,6=uv           ]\n"\
+"                        [         4=Gouraud,5=Raw,6=uv          ]\n"\
 "     -q flags           [ Turn on/off various shading options:  ]\n"\
 "                        [ 1=shadow, 2=reflect, 4=transmit, 8=two]\n"\
 "                        [ sides, 16=check uv, 32=flip normals   ]\n"\
@@ -139,18 +139,18 @@ smessage("     -S samples         [ Use 'samples' rays/pixel              ]\n");
 smessage("\n Optimization options:\n");
 smessage("     -O optimizer       [ 0 = none, 1 = slabs                   ]\n");
 smessage("\n Display option:\n");
-smessage("     -V mode            [ 0=none, 1-5=8bit, 6-10=15bit,         ]\n");
-smessage("                        [ 11-15=16bit, 16-20=24bit, 21-22=4bit  ]\n");
-smessage("     -P pallette        [ 0=grey, 1=332, 2=666, 3=EGA           ]\n");
-smessage("     -e start           [ Start position in VGA pallette        ]\n");
-smessage("     -W                 [ Wait for key before clearing display  ]\n");
-smessage("     -D flag            [ 0=no video dither, 1 = use dither     ]\n");
+smessage("     -V mode            [ DEPRECATED: 0=none, 1-5=8bit, 6-10=15bit ]\n");
+smessage("                        [ (all modern platforms use 24-bit SDL3)   ]\n");
+smessage("     -P pallette        [ 0=grey, 1=332, 2=666, 3=EGA              ]\n");
+smessage("     -e start           [ Start position in VGA pallette           ]\n");
+smessage("     -W                 [ Wait for key before clearing display     ]\n");
+smessage("     -D flag            [ 0=no video dither, 1 = use dither        ]\n");
 smessage("\n Frame counter option:\n");
-smessage("     -F start_frame     [ Skip frames until start_frame         ]\n");
+smessage("     -F start_frame     [ Skip frames until start_frame            ]\n");
 smessage("\n Abort option:\n");
-smessage("     -Q abort_option    [ 0 = no abort, 1 = check by pixel      ]\n");
-smessage("                        [ 2 = by line/object                    ]\n");
-smessage("     -s                 [ Allow System Calls                    ]\n");
+smessage("     -Q abort_option    [ 0 = no abort, 1 = check by pixel         ]\n");
+smessage("                        [ 2 = by line/object                       ]\n");
+smessage("     -s                 [ Allow System Calls                       ]\n");
 smessage("\n");
 fflush(message_log);
 //BezierNormalTest();
