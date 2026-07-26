@@ -2,8 +2,8 @@
  *  @brief Global types, constants, vector macros, and scene-graph structs.
  *
  *  This is the single most-included header in the renderer.  It defines:
- *  - Scalar and vector typedefs
- *  - All scene-graph structs
+ *  - Scalar and vector typedefs (@c Flt, @c Vec, @c fVec)
+ *  - All scene-graph structs (@c t_object, @c t_ray, @c t_isect)
  *  - Vector arithmetic macros (VecAdd, VecDot)
  *  - Numeric constants and floating-point comparison utilities
  *
@@ -13,15 +13,15 @@
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation
 files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy,
-modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the
+modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the 
 Software is furnished to do so, subject to the following conditions:
 
-The above copyright notice and this permission notice shall be included in all copies or substantial portions of the
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the 
 Software.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE
-WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
-COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE 
+WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR 
+COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR 
 OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 */
@@ -62,6 +62,12 @@ enum class OUT_FORMAT {
     OUT_RAWPPM = 2  /**< Raw PPM (.ppm) output. */
 };
 
+/** @brief Linkage qualifier for functions that must be visible during unit testing.
+ *
+ *  Expands to nothing (external linkage) when @c TESTING is defined, so that
+ *  normally-@c static functions are reachable from GTest.  Otherwise expands
+ *  to @c static.
+ */
 #ifdef TESTING
   #define UNIT_STATIC(x) x
 #else
@@ -80,97 +86,6 @@ enum class OUT_FORMAT {
 #endif
 /*CM end */
 
-#if defined(_MSC_VER) || defined(__MINGW32__)
-#include <conio.h> //for _kbhit()
-
-using UWORD32 = uint32_t;//not a type
-using UWORD64 = uint64_t;
-#else
-#if __APPLE__
-#include <stdio.h>
-#include <termios.h>
-#include <unistd.h>
-#include <fcntl.h>
-
-
-//unsigned long _wait=0;
-using UWORD32 = uint32_t;//not a type
-using UWORD64 = uint64_t;
-
-/** @brief Non-blocking keyboard-hit test (macOS implementation).
- *  @return 1 if a key is waiting in stdin, 0 otherwise.
- */
-static int _kbhit(void)
-{
-  struct termios oldt, newt;
-  int oldf;
-
-
-  tcgetattr(STDIN_FILENO, &oldt);
-  newt = oldt;
-  newt.c_lflag &= ~(ICANON | ECHO);
-  tcsetattr(STDIN_FILENO, TCSANOW, &newt);
-  oldf = fcntl(STDIN_FILENO, F_GETFL, 0);
-  fcntl(STDIN_FILENO, F_SETFL, oldf | O_NONBLOCK);
-
-
-  int ch = getchar();
-
-
-  tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
-  fcntl(STDIN_FILENO, F_SETFL, oldf);
-
-
-  if(ch != EOF)
-  {
-    ungetc(ch, stdin);
-    return 1;
-  }
-
-
-  return 0;
-}
-
-#else
-//linux kbhit from  https://www.flipcode.com/archives/_kbhit_for_Linux.shtml
-//added the includes
-#include <sys/ioctl.h>
-#include <stdbool.h>
-#include <unistd.h>
-#include <termios.h>
-/** @brief Non-blocking keyboard-hit test (Linux implementation).
- *  @return Number of bytes waiting in stdin (non-zero means a key is ready).
- */
-inline int _kbhit() {
-    static const int STDIN = 0;
-    static bool initialized = false;
-
-    if (!initialized) {
-        // Use termios to turn off line buffering
-        struct termios term;
-        tcgetattr(STDIN, &term);
-        term.c_lflag &= ~ICANON;
-        tcsetattr(STDIN, TCSANOW, &term);
-        setbuf(stdin, NULL);
-        initialized = true;
-    }
-
-    int bytesWaiting;
-    ioctl(STDIN, FIONREAD, &bytesWaiting);
-    return bytesWaiting;
-}
-#endif
-#endif
-
-//CM added 4/jan/2024
-/** @brief Block until the user presses Enter (cross-platform pause helper). */
-inline void defs3_hitanykey(void)
-{
-    //slog(std::make_tuple("Press ENTER to continue\n");
-    std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-    //polyray::pause();//cm160519
-}
-/*CM end */
 
 //#include "polyraync2.tab.h" //todo:for STRING. later change to enum class for exper_node_struct
 constexpr int TAB_STRING = 453;//todo:the above.
@@ -220,7 +135,7 @@ constexpr float TWO_PI = 6.283185207179586476925286766560;
 #endif //has_include numbers
 
 constexpr double PYTWO_PI_3 = 2.0943951023931954923084F;
-constexpr double PYTWO_PI_43 = 4.1887902047863909846168F;
+constexpr double PYTWO_PI_43 = 4.1887902047863909846168F; 
 //historic polyray name. actually 4*PI/3
 
 constexpr double PLY_SQRT2 = std::numbers::sqrt2;// 1.41421356237309504880F;
@@ -399,7 +314,7 @@ inline bool out_of_order(auto x, auto y) {
         if (std::isnan(y)) return false; // If y is NaN, it's not out of order; keep the valid x
     }
     return y < x;
-}
+}   
 /** @brief Return true when @p x <= @p y (generic C++20 version). */
 inline bool not_out_of_order(auto x, auto y) { return !out_of_order(x, y); }
 /** @brief Return the larger of @p x and @p y (generic C++20 version). */
@@ -449,6 +364,7 @@ typedef Flt Vec[3];        /**< 3-component world/object space vector (Flt[3]). 
 
 using NuVec = std::array<Flt, 3>;
 using NuMatrix = std::array<fVec,3>;
+using NuMatrix4 = std::array<std::array<Flt, 4>, 4>;
 
 typedef Flt Matrix[4][4];
 
@@ -642,7 +558,7 @@ struct TriData {
                           calculation, tri_bb[0..1] yield barycentric coordinates. */
 };
 
-// Bezier primitive data
+// Bezier primitive data 
 using Array2dint44 = std::array<std::array<fVec, 4>, 4>;
 struct BezierData {
     int patch_type;
@@ -678,7 +594,7 @@ struct triangle {
    queue.  For some height fields normal information is stored to do
    a smoothing of the resulting height field.
 
-   As an optimisation technique a queue of recently processed
+   As an optimization technique a queue of recently processed
    triangles is maintained, with the expectation that successive rays
    will very likely hit the same triangle.  This technique works best
    if the size of triangles is larger than one pixel in the resulting
@@ -730,7 +646,7 @@ struct ParametricData {
 constexpr int DEFAULT_SAMPLES=25;
 constexpr Flt DEFAULT_THRESHOLD=0.2;
 
-// Basic primitive types:
+// Basic primitive types: 
 using Shaper = unsigned short;
 enum class ShapeType : Shaper {
 Null =             (0),
@@ -761,11 +677,11 @@ SuperQ =          (24),
 Sweep =           (25),
 Torus =           (26),
 Tri =             (27),
-// Specialized object types:
+// Specialized object types: 
 Composite =       (28),
 Polygon =         (29),
 
-// Define the types of entries in a CSG tree
+// Define the types of entries in a CSG tree 
 Base_Object =     (50),
 Union =           (51),
 Intersection =    (52),
@@ -773,7 +689,7 @@ Inverse =         (53),
 Clip =            (54),
 Merge =           (55),
 
-// Define the distinct types of textures
+// Define the distinct types of textures 
 Plain =          (100),
 Checker =        (101),
 Special =        (102),
@@ -783,15 +699,15 @@ Layered =        (105),
 Indexed =        (106),
 Summed =         (107),
 
-// Define the types of entries in the symbol table
-String =         (160),     // Character string
-Object =         (161),     // A object definition
-Surface =        (162),     // A surface definition
-Texture =        (163),     // A texture definition
-Expression =     (164),     // An expression definition
-Transform =      (165),     // A transformation definition
-Texture_Map =    (166),     // A texture map definition
-Particle =       (167)     // A particle generator
+// Define the types of entries in the symbol table 
+String =         (160),     // Character string 
+Object =         (161),     // A object definition 
+Surface =        (162),     // A surface definition 
+Texture =        (163),     // A texture definition 
+Expression =     (164),     // An expression definition 
+Transform =      (165),     // A transformation definition 
+Texture_Map =    (166),     // A texture map definition 
+Particle =       (167)     // A particle generator 
 
 };
 
@@ -1040,7 +956,7 @@ struct PolyData {
     short poly_u, poly_v;
 };
 
-// primitive Revolve data
+// primitive Revolve data 
 struct RevolveData {
     int npoints;
     fVec* points;
@@ -1048,7 +964,7 @@ struct RevolveData {
     Transform trans;
 };
 
-// primitive data for Sweeps
+// primitive data for Sweeps 
 struct SweepData {
    Vec axis;
    int itype, npoints;
