@@ -33,46 +33,18 @@ OBJS = $(O1) $(O2) $(O3) $(O4) $(O5) $(O6) $(O7) $(O8) $(O9) $(O10) $(O11) $(O12
 #
 # DEBUG_MEM=-DDEBUG_POINTERS
 
-#
-# Use these definitions with Symantec C
-#
-#CC	=sc
-#MDL	=x
-#BIN_FLG =-c
-#CFLAGS	=-m$(MDL) -ff -A -r -DDOS386 -Id:\sc\include
-#CFLAGS	=-m$(MDL) -A -r -DDOS386
-#OPTFLG	=-o -4
-#LINKER	=link386
-#$(NAME).exe : $(OBJS)
-#	$(LINKER) @symantec.lnk
-
-#
-# Use these definitions with Watcom C
-# Use Watcom suggested "performance" options. /oneatx
-# Use /5r in place of /4r for a Pentium optimized compile.
-# Use /fp5 to optimize for Pentium FPU 
-#
-#LIB	=d:\WATCOM\lib386
-#CC	=wcc386
-#LINKER	=wlink
-#CFLAGS	=/mf /fpi87 /fp5 /zp4 /5r /w5
-#CFLAGS	=/mf /fpi87 /fp5 /zp4 /5r
-#OPTFLG	=/oneatx
-#CFLAGS	=/mf /zp4 /4r
-#$(NAME).exe : $(OBJS)
-#	$(LINKER) @watcom.lnk
 
 #
 # Use these definitions with GNU C++
 #
 CC	=gcc
 CPP     =g++
-CFLAGS  =-Wall -c -O3 -no-pie -g -DxTESTING -DxDEBUG -DixDEBUG_FN_CALLS -DxCOMPLETE_MEMORY_DEBUG -DxDEBUG_POINTERS  -Wextra -Werror=format=2 -Werror=missing-declarations -Werror=redundant-decls 
-CPPFLAGS  =-Wall -c -O3 -no-pie -DxTESTING -std=c++23 -g -Iinclude/SDL3/include \
+CFLAGS  =-Wall -c -O3 -no-pie -g -DTESTING -DDEBUG -DDEBUG_FN_CALLS -DCOMPLETE_MEMORY_DEBUG -DDEBUG_POINTERS  -Wextra -Werror=format=2 -Werror=missing-declarations -Werror=redundant-decls 
+CPPFLAGS  =-Wall -c -O3 -no-pie -DTESTING -std=c++23 -g -Iinclude/SDL3/include \
   -Iinclude/GSL/include \
   -Iinclude \
   -Wextra -Wshadow=local -Werror=format=2  -Werror=redundant-decls -fmax-errors=3 \
-  -DxDEBUG -DxDEBUG_FN_CALLS -DxCOMPLETE_MEMORY_DEBUG -DxDEBUG_POINTERS 
+  -DDEBUG -DDEBUG_FN_CALLS -DCOMPLETE_MEMORY_DEBUG -DDEBUG_POINTERS 
 CPPMODFLAGS =-Wall -fmodules-ts -g -DDEBUG -DDEBUG_FN_CALLS -DCOMPLETE_MEMORY_DEBUG \
  -DPOLYRAY_USE_MODULES -DDEBUG_POINTERS -Iinclude/SDL3/include -Iinclude/GSL/include \
  -std=c++23 -g -c -xc++
