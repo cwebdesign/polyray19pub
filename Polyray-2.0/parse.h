@@ -1,0 +1,33 @@
+#if !defined(__POLYRAY_PARSE_DEFS)
+#define __POLYRAY_PARSE_DEFS
+
+#include "defs3.h"
+extern Vec White;
+
+
+typedef struct { int first_line, last_line, first_column, last_column; } myOwnLtype;
+#define YYLTYPE myOwnLtype
+
+using location_t = myOwnLtype;
+
+//extern int yylex(void);
+//extern void ReadSceneFile(std::string str);
+
+/* Parser support functions and variables */
+
+
+/* reenable as required with reflex
+extern int yylex(void);
+extern int yylook(void);
+extern int yyinput(void);
+extern void yyoutput(int);
+extern int yyparse(void);
+extern char *yyptok(int);
+
+*/
+
+
+
+extern void Beginagain(void);//CM
+
+#endif /* __POLYRAY_PARSE_DEFS */

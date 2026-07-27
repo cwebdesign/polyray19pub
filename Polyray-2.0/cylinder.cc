@@ -1,0 +1,337 @@
+/* cylinder.cc
+
+  Polyray - MIT Licensed Revival
+  Copyright (C) 1993-1996, Alexander Enzmann, All rights reserved.
+  Copyright (C) 1999-2026, Clyde Meli, All rights reserved.
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation
+files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy,
+modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the
+Software is furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the
+Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", (C), WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE
+WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
+OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+*/
+
+#include "defs3.h"
+#include "memory.h"
+#include "io_ply.h"
+#include "intersec.h"
+#include "runtime_state.h"
+#include "symtab.h"
+#include "scan.h"
+#include "vector.h"
+#include "bound.h"
+#include "cylinder.h"
+#include "factory.h"
+
+
+
+void Cylinder_Evaluator(Object *, Flt, Flt, Vertex *);
+int CylIntersect(Viewpoint *, Object *, Ray *, Flt, Flt, Isect *);
+int CylNormal(CylData *cyl, Vec Pos, Vec N);
+void CylUV(Vec Pos, Vec D, Flt t, Flt *u, Flt * v);
+int CylInside(Object *obj, Vec Pos);
+
+openpolyray::dispatch::ObjectProcs CylProcs = {
+   .render = GenericRender,
+   .evaluate = Cylinder_Evaluator,
+   .initialize = GenericInitialize,
+   .intersect = CylIntersect,
+   .inside = CylInside,
+   .copy = GenericCopy,
+   .del = CylinderDelete,
+   };
+
+/**
+ * @brief Release the heap payload owned by a cylinder primitive.
+ *
+ * @param object Cylinder object whose `CylData` payload should be destroyed.
+ * @return No return value.
+ */
+void CylinderDelete(Object *object)
+{
+   if (object->o_copy != 0 || object->o_data == nullptr)
+      return;
+
+   delete static_cast<CylData *>(object->o_data);
+   object->o_data = nullptr;
+}
+
+/**
+ * Calculate the surface normal for a point on a cylinder.
+ * @param cyl Cylinder definition that provides the canonical-space transform.
+ * @param Pos Surface position in world space.
+ * @param N Receives the transformed outward normal.
+ * @return `1` after computing the normal.
+ */
+int CylNormal(CylData *cyl, Vec Pos, Vec N)
+{
+   Vec P;
+   /* Calculate the normal in cyl space */
+   TxVector(P, Pos, &cyl->trans);
+   P[2] = 0.0;
+   InvTxNormal(N, P, &cyl->trans);
+   return 1;
+}
+
+/**
+ * Compute cylinder texture coordinates for a ray hit in canonical cylinder space.
+ * @param Pos Ray origin in canonical cylinder space.
+ * @param D Normalized ray direction in canonical cylinder space.
+ * @param t Hit distance along `D`.
+ * @param u Receives the computed horizontal texture coordinate.
+ * @param v Receives the computed vertical texture coordinate.
+ * @return No return value.
+ */
+void CylUV(Vec Pos, Vec D, Flt t, Flt *u, Flt * v)
+{
+   Flt x, len, theta;
+   Vec P;
+   
+   VecAddScaled(Pos, t, D, P);
+   len = sqrt(P[0] * P[0] + P[1] * P[1]);
+   /* Make sure this vector is on the unit cylinder. */
+   if (len < PLY_EPSILON)
+      theta = 0;
+   else {
+      x  = P[0] / len;
+      if (P[1] == 0.0)
+         if (x > 0)
+            theta = 0.0;
+         else
+            theta = PYM_PI;
+      else {
+         theta = acos(x);
+         if (P[1] < 0.0)
+            theta = (2.0 * PYM_PI) - theta;
+         }
+      }
+   *u = theta / (2.0 * PYM_PI);
+   *v = P[2];
+}
+
+/**
+ * Validate a candidate cylinder hit and insert it into the hit list when valid.
+ * @param obj Cylinder object owning the intersection.
+ * @param cyl Cylinder data used for normal and UV evaluation.
+ * @param ray Original world-space ray.
+ * @param P Ray origin in canonical cylinder space.
+ * @param D Normalized ray direction in canonical cylinder space.
+ * @param t Candidate hit distance in canonical cylinder space.
+ * @param nmin Minimum valid hit distance in canonical cylinder space.
+ * @param nmax Maximum valid hit distance in canonical cylinder space.
+ * @param dist Scale factor between canonical-space and world-space ray lengths.
+ * @param hit Intersection list that receives the hit when accepted.
+ * @return Result from `Insert_Hit` when the hit is valid, otherwise `0`.
+ */
+static int check_cylinder_hit(Object *obj, CylData *cyl,
+                   Ray *ray, Vec P, Vec D, Flt t,
+                   Flt nmin, Flt nmax, Flt dist, Isect *hit)
+{
+   Vec PP, N, U;
+   Flt u, v;
+
+   if (t >= nmin && t <= nmax) {
+      if ((runtimeState::scene.Global_Shade_Flag & UV_CHECK) &&
+          (obj->o_sflag & UV_CHECK)) {
+         CylUV(P, D, t, &u, &v);
+         MakeVector(u, v, 0, U);
+         }
+      else
+         VecCopy(P, U);
+      t /= dist;
+      VecAddScaled(ray->P, t, ray->D, PP);
+      CylNormal(cyl, PP, N);
+      return Insert_Hit(obj, PP, N, t, U, hit);
+      }
+   else
+      return 0;
+}
+
+/**
+ * Intersect a ray with a cylinder primitive.
+ * @param Eye Viewpoint issuing the ray.
+ * @param obj Cylinder object being tested.
+ * @param ray Ray to intersect.
+ * @param mindist Minimum valid hit distance.
+ * @param maxdist Maximum valid hit distance.
+ * @param hit Intersection list that receives accepted hits.
+ * @return `1` when at least one cylinder hit is recorded, otherwise `0`.
+ */
+int CylIntersect(Viewpoint *Eye, Object *obj, Ray *ray,
+             Flt mindist, Flt maxdist, Isect *hit)
+{
+   Flt t1, t2, a, b, c;
+   Flt disc, x, y, z, dist, nmin, nmax;
+   Vec P, D;
+   int Flag = 0;
+   CylData *cyl = (CylData *)obj->o_data;
+
+   /* Now transform to canonical cylinder space */
+   TxVector(P, ray->P, &cyl->trans);
+   TxDirection(D, ray->D, &cyl->trans);
+   dist = VecNormalize(D);
+   nmin = mindist * dist;
+   nmax = maxdist * dist;
+
+   /* Do some simple exception testing */
+   if (P[2] > 1.0 && D[2] > 0.0)
+      return 0;
+   if (P[2] < 0.0 && D[2] < 0.0)
+      return 0;
+   b = P[0] * D[0] + P[1] * D[1];
+   c = P[0] * P[0] + P[1] * P[1] - 1.0;
+   if (c > 0.0 && b > 0.0)
+      /* Ray starts outside the cylinder, and continues
+         away from it. */
+      return 0;
+
+   if (cyl->closed && fabs(D[2]) > 0.0) {
+      /* Look for intersections with cylinder caps */
+      t1 = -P[2] / D[2]; /* Intersection with z=0 plane */
+      x = (P[0] + t1 * D[0]);
+      y = (P[1] + t1 * D[1]);
+      if ((x * x + y * y <= 1.0) &&
+          check_cylinder_hit(obj, cyl, ray, P, D, t1,
+                             nmin, nmax, dist, hit))
+         Flag = 1;
+      t1 += 1.0 / D[2];  /* Intersections with z=1 plane */
+      x = (P[0] + t1 * D[0]);
+      y = (P[1] + t1 * D[1]);
+      if ((x * x + y * y <= 1.0) &&
+          check_cylinder_hit(obj, cyl, ray, P, D, t1,
+                             nmin, nmax, dist, hit))
+         Flag = 1;
+      }
+
+   /* Look for intersections with the cylinder walls */
+   a = D[0] * D[0] + D[1] * D[1];
+   if (a < PLY_EPSILON)
+      /* Ray goes straight up and down, can't hit walls */
+      return Flag;
+
+   disc = b * b - a * c;
+   if (disc < 0.0) return Flag;
+   disc = sqrt(disc);
+   t1 = (-b + disc) / a;
+   t2 = (-b - disc) / a;
+   z = P[2] + t1 * D[2];
+   if (z >= 0.0 && z <= 1.0 &&
+       check_cylinder_hit(obj, cyl, ray, P, D, t1,
+                          nmin, nmax, dist, hit))
+      Flag = 1;
+   z = P[2] + t2 * D[2];
+   if (z >= 0.0 && z <= 1.0 &&
+       check_cylinder_hit(obj, cyl, ray, P, D, t2,
+                          nmin, nmax, dist, hit))
+      Flag = 1;
+
+   return Flag;
+}
+
+/**
+ * Test whether a world-space point lies inside the capped cylinder volume.
+ * @param obj Cylinder object being queried.
+ * @param Pos World-space point to test.
+ * @return `1` when `Pos` lies inside the capped cylinder volume, otherwise `0`.
+ */
+int CylInside(Object *obj, Vec Pos)
+{
+   /* For csg purposes, treat the cylinder as if it were
+      capped at each end */
+   Vec P;
+   Flt w2;
+   CylData *cyl = (CylData *)obj->o_data;
+
+   InvTxVector1(P, Pos, obj->o_trans)
+
+   /* Transform to canonical cone space */
+   TxVector(P, P, &cyl->trans);
+   w2 = P[0] * P[0] + P[1] * P[1];
+
+   return ((w2 < 1.0 && P[2] > 0.0 && P[2] < 1.0) ? 1 : 0);
+}
+
+/**
+ * Initialize an object as a cylinder primitive.
+ * @param object Object being configured as a cylinder.
+ * @param bot Bottom endpoint of the cylinder axis.
+ * @param top Top endpoint of the cylinder axis.
+ * @param radius Cylinder radius.
+ * @return `object` configured as a cylinder primitive.
+ */
+Object *MakeCylinder(Object *object, Vec bot, Vec top, Flt radius)
+{
+      
+   object->o_type = ShapeType::Cylinder;
+   object->o_procs = &CylProcs;
+   object->o_uv_steps[0] = 16;
+   object->o_uv_steps[1] =  2;
+
+   // Attempt to allocate memory for this primitive 
+   auto cyl = FactoryCylData();   
+
+   /* Process the primitive specific information */
+   if (radius < PLY_EPSILON)
+      serror("Degenerate Cylinder\n");
+   /* Find the axis and axis length */
+   NuVec axis;
+   VecSub(top, bot, axis);
+   Flt len = VecNuNormalize(axis);
+   if (len < PLY_EPSILON)
+      serror("Degenerate cyl\n");
+   VecCopy(bot, cyl->bot);
+   VecCopy(top, cyl->top);
+   cyl->radius = radius;
+   VecNegate(bot);
+   Vec tempbot;
+   tempbot[0] = bot[0]; tempbot[1] = bot[1]; tempbot[2] = bot[2];
+   Get_Coordinate_TransformCPP(cyl->trans, tempbot, axis, radius, len);
+   cyl->closed = 0;
+
+   /* Compute bounding information */
+   MakeVector(-1.0, -1.0, 0.0, object->o_bnd.lower_left);
+   MakeVector(2.0, 2.0, 1.0, object->o_bnd.lengths);
+   recompute_inverse_bbox(&object->o_bnd, &cyl->trans);
+   object->o_data = (void *)cyl;
+   return object;
+}
+
+/**
+ * Sample a cylinder surface point and normal from parametric UV coordinates.
+ * @param obj Cylinder object being evaluated.
+ * @param u Horizontal parameter on the cylinder surface.
+ * @param v Vertical parameter on the cylinder surface.
+ * @param vert Receives the sampled position, normal, and texture coordinates.
+ * @return No return value.
+ */
+void Cylinder_Evaluator(Object *obj, Flt u, Flt v, Vertex *vert)
+{
+   Vec P, N, v0, v1;
+   CylData *cyl = (CylData *)obj->o_data;
+   Flt theta = TWO_PI * u;
+
+   MakeVector(u, v, 0.0, vert->U);
+   MakeVector( cos(theta), sin(theta), v, P);
+   MakeVector(-sin(theta), cos(theta), 0.0, v0);
+   MakeVector(0.0, 0.0, 1.0, v1);
+   VecCross(v0, v1, N);
+   InvTxVector(P, P, &cyl->trans);
+   InvTxNormal(N, N, &cyl->trans);
+
+   VecCopy(P, vert->P);
+   if (obj->o_trans) {
+      TxVector(P, P, obj->o_trans);
+      TxNormal(N, N, obj->o_trans);
+      }
+   VecNormalize(N);
+   VecCopy(P, vert->W);
+   VecCopy(N, vert->N);
+}
